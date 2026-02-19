@@ -1158,20 +1158,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "payments_account_payable_id_fkey"
-            columns: ["account_payable_id"]
-            isOneToOne: false
-            referencedRelation: "accounts_payable"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_bank_id_fkey"
-            columns: ["bank_id"]
-            isOneToOne: false
-            referencedRelation: "banks"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "payments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1281,34 +1267,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "receipt_payment_adjustments_account_payable_id_fkey"
-            columns: ["account_payable_id"]
-            isOneToOne: false
-            referencedRelation: "accounts_payable"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "receipt_payment_adjustments_bank_id_fkey"
-            columns: ["bank_id"]
-            isOneToOne: false
-            referencedRelation: "banks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "receipt_payment_adjustments_imported_transaction_id_fkey"
-            columns: ["imported_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "imported_transactions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "receipt_payment_adjustments_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "receipt_payment_adjustments_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1461,13 +1419,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "revenues_bank_id_fkey"
-            columns: ["bank_id"]
-            isOneToOne: false
-            referencedRelation: "banks"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "revenues_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -1548,15 +1499,7 @@ export type Database = {
           xmls_skipped?: number | null
           xmls_updated?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "sieg_sync_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       super_admins: {
         Row: {
@@ -1645,22 +1588,7 @@ export type Database = {
           super_admin_id?: string
           tenant_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_impersonation_logs_super_admin_id_fkey"
-            columns: ["super_admin_id"]
-            isOneToOne: false
-            referencedRelation: "super_admins"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_impersonation_logs_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tenants: {
         Row: {
