@@ -1,1 +1,4 @@
 project_id = "pnwstilxwpzrjqdwrqay"
+
+[functions.migrate-users]
+verify_jwt = false
