@@ -17,6 +17,27 @@ const USERS = [
   { id: "db3a0fae-ec46-49bc-8939-9859f1da21ee", email: "claudia.gestaomed@email.com", password: "102030", full_name: "Ana Cláudia" },
 ];
 
+async function adminFetch(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  method: string,
+  path: string,
+  body?: unknown
+) {
+  const url = `${supabaseUrl}/auth/v1/admin${path}`;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": serviceRoleKey,
+      "Authorization": `Bearer ${serviceRoleKey}`,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -30,40 +51,111 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const results = { success: [] as string[], failed: [] as { email: string; error: string }[] };
+    const results = {
+      success: [] as { email: string; uuid: string }[],
+      failed: [] as { email: string; error: string; detail?: unknown }[],
+      skipped: [] as { email: string; uuid: string; reason: string }[],
+    };
+
+    // Fetch all existing auth users once
+    const { data: listData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    const existingAuthUsers = listData?.users ?? [];
 
     for (const user of USERS) {
-      const { data, error } = await supabase.auth.admin.createUser({
+      console.log(`\n--- Processing: ${user.email} (target UUID: ${user.id}) ---`);
+
+      // Check if target UUID already exists in auth.users
+      const byUUID = existingAuthUsers.find((u) => u.id === user.id);
+      if (byUUID) {
+        if (byUUID.email === user.email) {
+          console.log(`  ✓ Already exists with correct UUID and email. Skipping.`);
+          results.skipped.push({ email: user.email, uuid: user.id, reason: "Já existe com UUID e email corretos" });
+          continue;
+        } else {
+          console.log(`  ✗ UUID ${user.id} taken by another email: ${byUUID.email}`);
+          results.failed.push({ email: user.email, error: `UUID ${user.id} já está em uso por ${byUUID.email}` });
+          continue;
+        }
+      }
+
+      // Step 1: Delete orphaned profile with this UUID (from previous data migration)
+      console.log(`  → Removing orphaned profile/roles for UUID ${user.id}...`);
+      await supabase.from("user_roles").delete().eq("user_id", user.id);
+      await supabase.from("profiles").delete().eq("user_id", user.id);
+      console.log(`  → Orphaned records cleaned`);
+
+      // Step 2: Delete existing auth user by email if different UUID
+      const byEmail = existingAuthUsers.find((u) => u.email === user.email);
+      if (byEmail && byEmail.id !== user.id) {
+        console.log(`  → Email exists with UUID ${byEmail.id}, deleting auth user...`);
+        const del = await adminFetch(supabaseUrl, serviceRoleKey, "DELETE", `/users/${byEmail.id}`);
+        if (!del.ok) {
+          console.log(`  ✗ Delete failed: ${JSON.stringify(del.data)}`);
+          results.failed.push({ email: user.email, error: "Falha ao deletar usuário auth existente", detail: del.data });
+          continue;
+        }
+        // Also clean up their orphaned profile if any
+        await supabase.from("user_roles").delete().eq("user_id", byEmail.id);
+        await supabase.from("profiles").delete().eq("user_id", byEmail.id);
+        console.log(`  → Deleted auth user ${byEmail.id} and their records`);
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      // Step 3: Create user with forced UUID via REST API
+      console.log(`  → Creating with forced UUID ${user.id}...`);
+      const create = await adminFetch(supabaseUrl, serviceRoleKey, "POST", "/users", {
+        id: user.id,
         email: user.email,
         password: user.password,
         email_confirm: true,
         user_metadata: { full_name: user.full_name },
-        ...(user.id ? { id: user.id } : {}),
       });
 
-      if (error) {
-        results.failed.push({ email: user.email, error: error.message });
+      if (!create.ok) {
+        console.log(`  ✗ Create failed (${create.status}): ${JSON.stringify(create.data)}`);
+        results.failed.push({
+          email: user.email,
+          error: create.data?.msg || create.data?.message || "Erro ao criar usuário",
+          detail: create.data,
+        });
         continue;
       }
 
-      results.success.push(user.email);
+      const createdId = create.data.id;
+      console.log(`  ✓ Created with UUID: ${createdId}`);
 
-      // Wait for handle_new_user trigger
-      await new Promise((r) => setTimeout(r, 300));
+      // Step 4: Wait for handle_new_user trigger to create profile + user_role
+      await new Promise((r) => setTimeout(r, 600));
 
-      // Update profile full_name
-      await supabase
+      // Step 5: Update profile full_name
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ full_name: user.full_name })
-        .eq("user_id", data.user.id);
+        .eq("user_id", createdId);
 
-      // Register super admin
-      if (user.is_super_admin) {
-        await supabase
-          .from("super_admins")
-          .upsert({ user_id: data.user.id, name: user.full_name }, { onConflict: "user_id" });
+      if (profileError) {
+        console.log(`  ⚠ Profile update warning: ${profileError.message}`);
+      } else {
+        console.log(`  → Profile full_name updated`);
       }
+
+      // Step 6: Register super admin if needed
+      if (user.is_super_admin) {
+        const { error: saError } = await supabase
+          .from("super_admins")
+          .upsert({ user_id: createdId, name: user.full_name }, { onConflict: "user_id" });
+
+        if (saError) {
+          console.log(`  ⚠ Super admin warning: ${saError.message}`);
+        } else {
+          console.log(`  → Registered as super admin`);
+        }
+      }
+
+      results.success.push({ email: user.email, uuid: createdId });
     }
+
+    console.log(`\n=== SUMMARY: ${results.success.length} success | ${results.skipped.length} skipped | ${results.failed.length} failed ===`);
 
     return new Response(JSON.stringify(results, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
