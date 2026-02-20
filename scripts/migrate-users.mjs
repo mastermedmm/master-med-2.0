@@ -13,7 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://pnwstilxwpzrjqdwrqay.supabase.co';
 
 // Cole aqui a service_role key do Supabase Dashboard → Settings → API
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'COLE_AQUI_A_SERVICE_ROLE_KEY';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBud3N0aWx4d3B6cmpxZHdycWF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MDc1NzU1OCwiZXhwIjoyMDg2MzMzNTU4fQ.WI4smWTvCFsLkNL2feYr9FcAa8krQ9Ofp7qZ7tzWGzY';
 
 // ─── Usuários a migrar ────────────────────────────────────────────────────────
 const USERS = [
