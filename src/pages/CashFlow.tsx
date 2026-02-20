@@ -145,7 +145,7 @@ export default function CashFlow() {
       const allEntries: CashFlowEntry[] = [];
 
       // Map revenues (entries - in) - exclude reversal revenues to avoid double counting
-      (revenuesResult.data as Revenue[] || []).forEach(r => {
+      ((revenuesResult.data || []) as unknown as Revenue[]).forEach(r => {
         // Skip reversal revenues as they're already counted via payment reversals
         if (r.source === 'estorno_pagamento') return;
         
@@ -182,7 +182,7 @@ export default function CashFlow() {
       });
 
       // Map payments (exits and reversals)
-      (paymentsResult.data as Payment[] || []).forEach(p => {
+      ((paymentsResult.data || []) as unknown as Payment[]).forEach(p => {
         const doctorName = p.accounts_payable?.doctors?.name || 'Médico';
         const invoiceInfo = p.accounts_payable?.invoices 
           ? `NF ${p.accounts_payable.invoices.invoice_number}` 
