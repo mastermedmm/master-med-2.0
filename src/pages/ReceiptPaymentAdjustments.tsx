@@ -100,7 +100,7 @@ export default function ReceiptPaymentAdjustments() {
       console.error('Error loading adjustments:', error);
     }
 
-    setAdjustments((data || []) as Adjustment[]);
+    setAdjustments((data || []) as unknown as Adjustment[]);
     setIsLoading(false);
   };
 

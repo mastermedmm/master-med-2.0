@@ -124,7 +124,7 @@ export default function PayableDetails() {
         .order('payment_date', { ascending: false });
 
       if (paymentsError) throw paymentsError;
-      setPayments(paymentsData || []);
+      setPayments((paymentsData || []) as unknown as Payment[]);
 
       // Load banks
       const { data: banksData, error: banksError } = await supabase

@@ -92,7 +92,7 @@ export function PaymentHistoryPopover({
         .order('payment_date', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      setPayments((data || []) as unknown as Payment[]);
     } catch (error: any) {
       console.error('Error loading payments:', error);
       toast({
