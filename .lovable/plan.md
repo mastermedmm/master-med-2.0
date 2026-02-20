@@ -1,45 +1,35 @@
 
 
-# Limpeza de Usuarios por Empresa
+# Edge Function: migrate-users
 
-## Situacao Atual e Acoes Necessarias
+## O que sera feito
 
-### GESTAOMED
-- **Manter:** admgestaomed@email.com (admin)
-- **Remover:** 3 usuarios extras (Manoel Jr duplicado, Viviane Bittecourt, Admin Gestao Med)
+Criar uma edge function `migrate-users` que replica exatamente a logica do script `scripts/migrate-users.mjs`, permitindo execucao diretamente pelo Lovable.
 
-### MASTERMED
-- **Manter:** admmastermed@email.com -- este usuario NAO tem role no MASTERMED atualmente (foi deletado anteriormente). Precisa ser adicionado.
-- **Remover:** 1 usuario extra (Admin MasterMed)
+## Funcionalidade
 
-### MAISMED
-- **Manter:** maismedgestao@gmail.com (admin)
-- **Remover:** 1 usuario extra (Admin MaisMed)
-
-### MEDCENTER
-- **Manter:** admmedcenter@email.com (admin)
-- **Remover:** 1 usuario extra (Admin MedCenter)
-
-### SAUDEMED (SAUDE)
-- **Manter:** admsaude@email.com (admin)
-- **Remover:** 1 usuario extra (Admin SaudeMed)
-
----
+A function ira:
+1. Criar 9 usuarios no auth.users mantendo os UUIDs originais
+2. Aguardar o trigger `handle_new_user` processar (cria profile + user_role automaticamente)
+3. Atualizar o `full_name` no profiles
+4. Registrar o usuario `manoeljunior51@gmail.com` como super admin
+5. Retornar um JSON com o resultado (sucesso/falha para cada usuario)
 
 ## Detalhes Tecnicos
 
-Seriam executadas as seguintes operacoes SQL via migration:
+### Arquivo criado
+- `supabase/functions/migrate-users/index.ts`
 
-1. **Inserir role admin para admmastermed@email.com no tenant MASTERMED** (user_id: `5c118377`, tenant_id: `a26d9ada-a015-4047-858c-30cbcb6c2303`)
+### Configuracao
+- Adicionar `verify_jwt = false` no `supabase/config.toml` (a function nao precisa de autenticacao pois usa service_role_key internamente e e de uso unico)
 
-2. **Deletar user_roles dos usuarios extras:**
-   - GESTAOMED: user_ids `99b0f549`, `ec0f195d`, `00599427`
-   - MASTERMED: user_id `7dabfe86`
-   - MAISMED: user_id `b77d3436`
-   - MEDCENTER: user_id `6913f27a`
-   - SAUDEMED: user_id `fae36653`
+### Logica
+- Usa `SUPABASE_SERVICE_ROLE_KEY` (ja configurado como secret) para chamar `auth.admin.createUser`
+- Lista de usuarios hardcoded identica ao script original
+- Para cada usuario: cria via admin API, aguarda 300ms, atualiza profile, e se for super_admin insere na tabela
+- Retorna JSON com arrays `success` e `failed`
 
-Total: 7 registros removidos, 1 registro inserido.
-
-> **Nota:** Isso remove apenas o acesso (user_roles). Os usuarios continuam existindo no auth.users e profiles, mas sem acesso a nenhuma empresa.
+### Seguranca
+- A function sera publica (sem JWT) pois e de uso unico para migracao
+- Apos executar, pode ser removida
 
