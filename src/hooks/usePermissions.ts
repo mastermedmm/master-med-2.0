@@ -53,10 +53,10 @@ interface UsePermissionsReturn {
 }
 
 async function fetchPermissions(userId: string): Promise<PermissionsData> {
-  // Fetch profile to get tenant_id
+  // Fetch profile to get tenant_id (prefer active_tenant_id over tenant_id)
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
-    .select('tenant_id')
+    .select('tenant_id, active_tenant_id')
     .eq('user_id', userId)
     .single();
 
@@ -65,7 +65,7 @@ async function fetchPermissions(userId: string): Promise<PermissionsData> {
     return { role: null, permissions: [] };
   }
 
-  const userTenantId = profileData?.tenant_id;
+  const userTenantId = profileData?.active_tenant_id || profileData?.tenant_id;
 
   // Fetch user role
   const { data: roleData, error: roleError } = await supabase
