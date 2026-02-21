@@ -1063,6 +1063,50 @@ export type Database = {
           },
         ]
       }
+      licensees: {
+        Row: {
+          active: boolean
+          commission: number
+          cpf: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          commission?: number
+          cpf: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          commission?: number
+          cpf?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licensees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_create: boolean
