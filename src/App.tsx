@@ -52,7 +52,7 @@ import TenantForm from "./pages/super-admin/TenantForm";
 
 const queryClient = new QueryClient();
 
-const Router = HashRouter;
+const Router = BrowserRouter;
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
