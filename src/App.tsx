@@ -30,6 +30,7 @@ import Users from "./pages/Users";
 import Permissions from "./pages/Permissions";
 import Settings from "./pages/Settings";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
+import Licensees from "./pages/Licensees";
 import Expenses from "./pages/Expenses";
 import CashFlow from "./pages/CashFlow";
 import AccumulatedCashFlow from "./pages/AccumulatedCashFlow";
@@ -204,6 +205,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ChartOfAccounts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path={ROUTES.licensees}
+        element={
+          <ProtectedRoute>
+            <Licensees />
           </ProtectedRoute>
         }
       />

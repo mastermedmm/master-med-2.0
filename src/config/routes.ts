@@ -16,6 +16,7 @@ export const ROUTES = {
   expenses: '/despesas',
   expenseCategories: '/categorias-despesas',
   chartOfAccounts: '/plano-contas',
+  licensees: '/licenciados',
   auditLogs: '/log-eventos',
   doctors: '/medicos',
   hospitals: '/hospitais',

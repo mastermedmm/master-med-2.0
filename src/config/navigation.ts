@@ -20,6 +20,7 @@ import {
   Scale,
   Cloud,
   History,
+  Handshake,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 
@@ -52,6 +53,7 @@ export const registrationNav: AppNavItem[] = [
   { label: "Emitentes", to: ROUTES.issuers, icon: Factory, module: "issuers" },
   { label: "Bancos", to: ROUTES.banks, icon: Landmark, module: "banks" },
   { label: "Plano de Contas", to: ROUTES.chartOfAccounts, icon: FolderTree, module: "expenses" },
+  { label: "Licenciados", to: ROUTES.licensees, icon: Handshake, module: "doctors" },
 ];
 
 export const adminNav: AppNavItem[] = [
