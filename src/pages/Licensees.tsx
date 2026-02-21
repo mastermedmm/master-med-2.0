@@ -11,7 +11,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Loader2, Plus, Pencil, Trash2, Handshake } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Handshake, KeyRound } from 'lucide-react';
 
 interface Licensee {
   id: string;
@@ -36,6 +36,12 @@ export default function Licensees() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Password dialog state
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordLicensee, setPasswordLicensee] = useState<Licensee | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [settingPassword, setSettingPassword] = useState(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -160,6 +166,30 @@ export default function Licensees() {
   const formatCommission = (val: number) =>
     val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  const openPasswordDialog = (l: Licensee) => {
+    setPasswordLicensee(l);
+    setNewPassword('');
+    setPasswordDialogOpen(true);
+  };
+
+  const handleSetPassword = async () => {
+    if (!passwordLicensee || !newPassword) return;
+    setSettingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('licensee-auth/set-password', {
+        body: { licenseeId: passwordLicensee.id, password: newPassword, resetRequired: true },
+      });
+      if (error || data?.error) throw new Error(data?.error || 'Erro');
+      toast({ title: 'Senha definida com sucesso', description: 'O licenciado deverá trocar a senha no primeiro acesso' });
+      setPasswordDialogOpen(false);
+    } catch (error) {
+      console.error('Error setting password:', error);
+      toast({ title: 'Erro ao definir senha', variant: 'destructive' });
+    } finally {
+      setSettingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -221,6 +251,11 @@ export default function Licensees() {
                     <TableCell>
                       <div className="flex gap-1">
                         {canUpdate('doctors') && (
+                          <Button variant="ghost" size="icon" onClick={() => openPasswordDialog(l)} title="Definir senha do portal">
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canUpdate('doctors') && (
                           <Button variant="ghost" size="icon" onClick={() => openEdit(l)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -278,6 +313,34 @@ export default function Licensees() {
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {editingId ? 'Atualizar' : 'Cadastrar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir Senha do Portal</DialogTitle>
+            <DialogDescription>
+              Defina a senha de acesso ao Portal do Licenciado para <strong>{passwordLicensee?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="lic-password">Nova Senha</Label>
+              <Input id="lic-password" type="text" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              O licenciado será solicitado a trocar a senha no primeiro acesso ao portal.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordDialogOpen(false)} disabled={settingPassword}>Cancelar</Button>
+            <Button onClick={handleSetPassword} disabled={settingPassword || newPassword.length < 6}>
+              {settingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+              Definir Senha
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -2,3 +2,9 @@ project_id = "pnwstilxwpzrjqdwrqay"
 
 [functions.migrate-users]
 verify_jwt = false
+
+[functions.licensee-auth]
+verify_jwt = false
+
+[functions.licensee-portal-data]
+verify_jwt = false

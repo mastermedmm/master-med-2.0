@@ -337,6 +337,7 @@ export type Database = {
           id: string
           is_freelancer: boolean
           last_login_at: string | null
+          licensee_id: string | null
           linked_company: string | null
           linked_company_2: string | null
           must_change_password: boolean
@@ -365,6 +366,7 @@ export type Database = {
           id?: string
           is_freelancer?: boolean
           last_login_at?: string | null
+          licensee_id?: string | null
           linked_company?: string | null
           linked_company_2?: string | null
           must_change_password?: boolean
@@ -393,6 +395,7 @@ export type Database = {
           id?: string
           is_freelancer?: boolean
           last_login_at?: string | null
+          licensee_id?: string | null
           linked_company?: string | null
           linked_company_2?: string | null
           must_change_password?: boolean
@@ -407,6 +410,13 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "doctors_licensee_id_fkey"
+            columns: ["licensee_id"]
+            isOneToOne: false
+            referencedRelation: "licensees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "doctors_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1063,6 +1073,38 @@ export type Database = {
           },
         ]
       }
+      licensee_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          licensee_id: string
+          session_token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          licensee_id: string
+          session_token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          licensee_id?: string
+          session_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licensee_sessions_licensee_id_fkey"
+            columns: ["licensee_id"]
+            isOneToOne: false
+            referencedRelation: "licensees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       licensees: {
         Row: {
           active: boolean
@@ -1071,7 +1113,10 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          last_login_at: string | null
+          must_change_password: boolean
           name: string
+          portal_password_hash: string | null
           tenant_id: string | null
           updated_at: string
         }
@@ -1082,7 +1127,10 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          last_login_at?: string | null
+          must_change_password?: boolean
           name: string
+          portal_password_hash?: string | null
           tenant_id?: string | null
           updated_at?: string
         }
@@ -1093,7 +1141,10 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          last_login_at?: string | null
+          must_change_password?: boolean
           name?: string
+          portal_password_hash?: string | null
           tenant_id?: string | null
           updated_at?: string
         }
