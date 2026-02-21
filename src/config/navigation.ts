@@ -32,8 +32,8 @@ export type AppNavItem = {
 
 export const primaryNav: AppNavItem[] = [
   { label: "Dashboard", to: ROUTES.dashboard, icon: LayoutDashboard, module: "dashboard" },
-  { label: "Importar NF", to: ROUTES.import, icon: FileUp, module: "import" },
   { label: "Integração SIEG", to: ROUTES.siegIntegration, icon: Cloud, module: "import" },
+  { label: "Importar NF", to: ROUTES.import, icon: FileUp, module: "import" },
   { label: "Rateio", to: ROUTES.allocation, icon: PieChart, module: "allocation" },
   { label: "Lançamentos", to: ROUTES.payables, icon: CreditCard, module: "payables" },
 ];
