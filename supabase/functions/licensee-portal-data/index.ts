@@ -175,8 +175,8 @@ Deno.serve(async (req) => {
         // Total paid
         const totalPaid = doctorAPs.reduce((sum, ap) => sum + (paymentsByAccount[ap.id] || 0), 0);
 
-        // Commission based on rateio (amount_to_pay), not gross billing
-        const commission = totalAmountToPay * commissionRate;
+        // Commission based on gross billing
+        const commission = grossBilling * commissionRate;
 
         totalBilling += grossBilling;
         totalCommission += commission;
