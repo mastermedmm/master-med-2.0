@@ -21,7 +21,6 @@ const MONTHS = [
 
 const currentDate = new Date();
 const currentYear = currentDate.getFullYear();
-const YEARS = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
 interface DoctorEntry {
   id: string;
@@ -50,6 +49,7 @@ export default function LicenseeDashboard() {
   const [doctors, setDoctors] = useState<DoctorEntry[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [commissionRate, setCommissionRate] = useState<number>(0);
+  const [availableYears, setAvailableYears] = useState<number[]>([currentYear]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
@@ -86,6 +86,7 @@ export default function LicenseeDashboard() {
         setDoctors(data.doctors || []);
         setSummary(data.summary || null);
         setCommissionRate(data.commissionRate || 0);
+        if (data.availableYears?.length) setAvailableYears(data.availableYears);
       }
     } catch (error) {
       console.error('Error:', error);
@@ -156,7 +157,7 @@ export default function LicenseeDashboard() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {YEARS.map((y) => (
+              {availableYears.map((y) => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
               ))}
             </SelectContent>
