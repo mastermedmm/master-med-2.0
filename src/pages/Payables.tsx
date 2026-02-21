@@ -882,7 +882,7 @@ export default function Payables() {
       case 'expectedPaymentDate':
         return <span className={fontConfig.base}>{formatDateBR(payable.expected_payment_date)}</span>;
       case 'paidAt':
-        return <span className={fontConfig.base}>{formatDateTimeBR(payable.paid_at)}</span>;
+        return <span className={fontConfig.base}>{formatDateBR(payable.paid_at)}</span>;
       case 'createdAt':
         return <span className={fontConfig.base}>{formatDateBR(payable.created_at)}</span>;
       case 'status':
