@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -224,165 +225,167 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <SettingsIcon className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold">Configurações</h1>
-          <p className="text-muted-foreground">Gerencie as configurações do sistema</p>
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <SettingsIcon className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Configurações</h1>
+            <p className="text-muted-foreground">Gerencie as configurações do sistema</p>
+          </div>
         </div>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Link className="h-5 w-5" />
-            Link do Portal do Médico
-          </CardTitle>
-          <CardDescription>
-            Configure o link externo que será exibido no botão do Portal do Médico. 
-            Este link pode direcionar para um sistema externo, formulário ou página adicional.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="doctor-portal-link">URL do Link</Label>
-            <Input
-              id="doctor-portal-link"
-              type="url"
-              placeholder="https://exemplo.com/formulario"
-              value={doctorPortalLink}
-              onChange={(e) => setDoctorPortalLink(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Deixe em branco para ocultar o botão no portal do médico.
-            </p>
-          </div>
-          
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Salvar Configurações
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ImageIcon className="h-5 w-5" />
-            Banner do Portal do Médico
-          </CardTitle>
-          <CardDescription>
-            Configure uma imagem de banner que será exibida no topo do Portal do Médico.
-            O banner será clicável e redirecionará para o link configurado acima.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Banner Preview */}
-          <div className="space-y-2">
-            <Label>Preview do Banner</Label>
-            <div className="border rounded-lg overflow-hidden bg-muted">
-              {bannerUrl ? (
-                <img 
-                  src={bannerUrl} 
-                  alt="Banner atual" 
-                  className="w-full h-auto max-h-48 object-cover"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
-                  <p className="text-sm">Nenhum banner configurado</p>
-                </div>
-              )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link className="h-5 w-5" />
+              Link do Portal do Médico
+            </CardTitle>
+            <CardDescription>
+              Configure o link externo que será exibido no botão do Portal do Médico. 
+              Este link pode direcionar para um sistema externo, formulário ou página adicional.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="doctor-portal-link">URL do Link</Label>
+              <Input
+                id="doctor-portal-link"
+                type="url"
+                placeholder="https://exemplo.com/formulario"
+                value={doctorPortalLink}
+                onChange={(e) => setDoctorPortalLink(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco para ocultar o botão no portal do médico.
+              </p>
             </div>
-          </div>
-
-          {/* Upload Controls */}
-          <div className="flex flex-wrap gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={handleBannerUpload}
-              className="hidden"
-              id="banner-upload"
-            />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingBanner}
-            >
-              {uploadingBanner ? (
+            
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
+                  Salvando...
                 </>
               ) : (
                 <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Selecionar Imagem
+                  <Save className="mr-2 h-4 w-4" />
+                  Salvar Configurações
                 </>
               )}
             </Button>
-            
-            {bannerUrl && (
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5" />
+              Banner do Portal do Médico
+            </CardTitle>
+            <CardDescription>
+              Configure uma imagem de banner que será exibida no topo do Portal do Médico.
+              O banner será clicável e redirecionará para o link configurado acima.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Banner Preview */}
+            <div className="space-y-2">
+              <Label>Preview do Banner</Label>
+              <div className="border rounded-lg overflow-hidden bg-muted">
+                {bannerUrl ? (
+                  <img 
+                    src={bannerUrl} 
+                    alt="Banner atual" 
+                    className="w-full h-auto max-h-48 object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
+                    <p className="text-sm">Nenhum banner configurado</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Upload Controls */}
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleBannerUpload}
+                className="hidden"
+                id="banner-upload"
+              />
               <Button
-                variant="destructive"
-                onClick={handleRemoveBanner}
-                disabled={removingBanner}
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingBanner}
               >
-                {removingBanner ? (
+                {uploadingBanner ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Removendo...
+                    Enviando...
                   </>
                 ) : (
                   <>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Remover Banner
+                    <Upload className="mr-2 h-4 w-4" />
+                    Selecionar Imagem
                   </>
                 )}
               </Button>
-            )}
-          </div>
+              
+              {bannerUrl && (
+                <Button
+                  variant="destructive"
+                  onClick={handleRemoveBanner}
+                  disabled={removingBanner}
+                >
+                  {removingBanner ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Removendo...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remover Banner
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
 
-          {/* Instructions */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            <h4 className="text-sm font-medium">Instruções para o banner</h4>
-            <div className="text-xs text-muted-foreground space-y-2">
-              <p><strong>Tamanho ideal:</strong> 1200x400 pixels (proporção 3:1)</p>
-              <p><strong>Formatos aceitos:</strong> JPG, PNG, WebP</p>
-              <p><strong>Tamanho máximo:</strong> 5MB</p>
-              <div className="pt-2 border-t border-border">
-                <p className="font-medium text-foreground mb-1">Altura exibida por dispositivo:</p>
-                <ul className="list-disc list-inside space-y-0.5">
-                  <li>Mobile: até 128px</li>
-                  <li>Tablet pequeno: até 192px</li>
-                  <li>Tablet: até 224px</li>
-                  <li>Desktop: até 256px</li>
-                </ul>
-              </div>
-              <div className="pt-2 border-t border-border">
-                <p className="font-medium text-foreground mb-1">Dicas:</p>
-                <ul className="list-disc list-inside space-y-0.5">
-                  <li>Evite texto pequeno (pode ficar ilegível no mobile)</li>
-                  <li>Mantenha elementos importantes centralizados</li>
-                  <li>O banner será clicável e abrirá o link configurado acima</li>
-                </ul>
+            {/* Instructions */}
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-medium">Instruções para o banner</h4>
+              <div className="text-xs text-muted-foreground space-y-2">
+                <p><strong>Tamanho ideal:</strong> 1200x400 pixels (proporção 3:1)</p>
+                <p><strong>Formatos aceitos:</strong> JPG, PNG, WebP</p>
+                <p><strong>Tamanho máximo:</strong> 5MB</p>
+                <div className="pt-2 border-t border-border">
+                  <p className="font-medium text-foreground mb-1">Altura exibida por dispositivo:</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>Mobile: até 128px</li>
+                    <li>Tablet pequeno: até 192px</li>
+                    <li>Tablet: até 224px</li>
+                    <li>Desktop: até 256px</li>
+                  </ul>
+                </div>
+                <div className="pt-2 border-t border-border">
+                  <p className="font-medium text-foreground mb-1">Dicas:</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>Evite texto pequeno (pode ficar ilegível no mobile)</li>
+                    <li>Mantenha elementos importantes centralizados</li>
+                    <li>O banner será clicável e abrirá o link configurado acima</li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
   );
 }
