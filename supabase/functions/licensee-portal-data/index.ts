@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
           netAmount: totalAmountToPay,
           paidAmount: totalPaid,
           commission,
+          allocationCount: doctorAPs.length,
         };
       });
 
