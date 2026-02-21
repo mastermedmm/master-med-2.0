@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +66,7 @@ interface Filters {
   dateFrom: Date | undefined;
   dateTo: Date | undefined;
   statusFilter: 'all' | 'pending_receipt' | 'pending_allocation';
+  allocationFilter: 'all' | 'allocated' | 'not_allocated';
 }
 
 interface PaymentInfo {
@@ -92,6 +94,7 @@ export default function AllocationList() {
     dateFrom: undefined,
     dateTo: undefined,
     statusFilter: 'all',
+    allocationFilter: 'all',
   });
   const [showFilters, setShowFilters] = useState(false);
   
@@ -150,6 +153,14 @@ export default function AllocationList() {
         // Show only invoices without allocations
         if ((inv._allocations_count ?? 0) > 0) return false;
       }
+
+      // Allocation filter (NF Rateada)
+      if (filters.allocationFilter === 'allocated') {
+        if ((inv._allocations_count ?? 0) === 0) return false;
+      }
+      if (filters.allocationFilter === 'not_allocated') {
+        if ((inv._allocations_count ?? 0) > 0) return false;
+      }
       
       return true;
     });
@@ -186,10 +197,10 @@ export default function AllocationList() {
     return { total, allocated, pendingAllocation, pendingReceipt };
   }, [invoices]);
 
-  const hasActiveFilters = filters.company || filters.hospital || filters.invoiceNumber || filters.cnpj || filters.dateFrom || filters.dateTo || filters.statusFilter !== 'all';
+  const hasActiveFilters = filters.company || filters.hospital || filters.invoiceNumber || filters.cnpj || filters.dateFrom || filters.dateTo || filters.statusFilter !== 'all' || filters.allocationFilter !== 'all';
 
   const clearFilters = () => {
-    setFilters({ company: '', hospital: '', invoiceNumber: '', cnpj: '', dateFrom: undefined, dateTo: undefined, statusFilter: 'all' });
+    setFilters({ company: '', hospital: '', invoiceNumber: '', cnpj: '', dateFrom: undefined, dateTo: undefined, statusFilter: 'all', allocationFilter: 'all' });
   };
   
   const handleCardClick = (filterType: 'all' | 'pending_receipt' | 'pending_allocation') => {
@@ -720,6 +731,24 @@ export default function AllocationList() {
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+
+              {/* NF Rateada */}
+              <div className="space-y-1.5 min-w-[130px]">
+                <Label className="text-xs">NF Rateada</Label>
+                <Select
+                  value={filters.allocationFilter}
+                  onValueChange={(v) => setFilters(f => ({ ...f, allocationFilter: v as Filters['allocationFilter'] }))}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="allocated">Sim</SelectItem>
+                    <SelectItem value="not_allocated">Não</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Clear button */}
