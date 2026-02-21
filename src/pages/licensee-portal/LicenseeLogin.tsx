@@ -20,35 +20,27 @@ export default function LicenseeLogin() {
   const { login, licensee, loading: authLoading } = useLicenseeAuth();
   const { toast } = useToast();
   
-  const [cpf, setCpf] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showTenantSelection, setShowTenantSelection] = useState(false);
   const [availableTenants, setAvailableTenants] = useState<TenantOption[]>([]);
-  const [storedCredentials, setStoredCredentials] = useState<{ cpf: string; password: string } | null>(null);
+  const [storedCredentials, setStoredCredentials] = useState<{ email: string; password: string } | null>(null);
 
   if (!authLoading && licensee) {
     navigate(ROUTES.licenseePortal.dashboard, { replace: true });
     return null;
   }
 
-  const formatCpf = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    if (digits.length <= 3) return digits;
-    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
-    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
-    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cpf.trim() || !password) {
-      toast({ title: 'Campos obrigatórios', description: 'Preencha o CPF e a senha', variant: 'destructive' });
+    if (!email.trim() || !password) {
+      toast({ title: 'Campos obrigatórios', description: 'Preencha o e-mail e a senha', variant: 'destructive' });
       return;
     }
 
     setLoading(true);
-    const result = await login(cpf.replace(/\D/g, ''), password);
+    const result = await login(email.trim().toLowerCase(), password);
 
     if (result.error) {
       toast({ title: 'Erro no login', description: result.error, variant: 'destructive' });
@@ -57,7 +49,7 @@ export default function LicenseeLogin() {
     }
 
     if (result.requiresTenantSelection && result.tenants) {
-      setStoredCredentials({ cpf: cpf.replace(/\D/g, ''), password });
+      setStoredCredentials({ email: email.trim().toLowerCase(), password });
       setAvailableTenants(result.tenants);
       setShowTenantSelection(true);
       setLoading(false);
@@ -74,7 +66,7 @@ export default function LicenseeLogin() {
   const handleTenantSelect = async (tenantId: string) => {
     if (!storedCredentials) return;
     setLoading(true);
-    const result = await login(storedCredentials.cpf, storedCredentials.password, tenantId);
+    const result = await login(storedCredentials.email, storedCredentials.password, tenantId);
 
     if (result.error) {
       toast({ title: 'Erro no login', description: result.error, variant: 'destructive' });
@@ -148,14 +140,14 @@ export default function LicenseeLogin() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="cpf">CPF</Label>
+              <Label htmlFor="email">E-mail</Label>
               <Input
-                id="cpf"
-                type="text"
-                placeholder="000.000.000-00"
-                value={cpf}
-                onChange={(e) => setCpf(formatCpf(e.target.value))}
-                autoComplete="username"
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">

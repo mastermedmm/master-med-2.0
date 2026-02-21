@@ -32,7 +32,7 @@ interface LicenseeAuthContextType {
   tenant: Tenant | null;
   loading: boolean;
   mustChangePassword: boolean;
-  login: (cpf: string, password: string, tenantId?: string) => Promise<LoginResult>;
+  login: (email: string, password: string, tenantId?: string) => Promise<LoginResult>;
   changePassword: (newPassword: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
 }
@@ -85,10 +85,10 @@ export function LicenseeAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (cpf: string, password: string, tenantId?: string): Promise<LoginResult> => {
+  const login = async (email: string, password: string, tenantId?: string): Promise<LoginResult> => {
     try {
       const { data, error } = await supabase.functions.invoke('licensee-auth/login', {
-        body: { cpf, password, tenantId },
+        body: { email, password, tenantId },
       });
 
       if (error) return { error: 'Erro ao fazer login. Tente novamente.' };
