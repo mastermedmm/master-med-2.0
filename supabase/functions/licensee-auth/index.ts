@@ -49,23 +49,22 @@ Deno.serve(async (req) => {
 
     // POST /login
     if (req.method === "POST" && path === "login") {
-      const { cpf, password, tenantId } = await req.json();
+      const { email, password, tenantId } = await req.json();
 
-      if (!cpf || !password) {
+      if (!email || !password) {
         return new Response(
-          JSON.stringify({ error: "CPF e senha são obrigatórios" }),
+          JSON.stringify({ error: "E-mail e senha são obrigatórios" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Clean CPF - remove non-digits
-      const cleanCpf = cpf.replace(/\D/g, '');
+      const cleanEmail = email.trim().toLowerCase();
 
-      // Find all licensees with this CPF
+      // Find all licensees with this email
       const { data: licensees, error: licenseeError } = await supabase
         .from("licensees")
         .select("id, name, cpf, email, commission, portal_password_hash, must_change_password, tenant_id, active, tenants(id, name, slug)")
-        .eq("cpf", cleanCpf)
+        .eq("email", cleanEmail)
         .eq("active", true)
         .not("portal_password_hash", "is", null);
 
@@ -79,7 +78,7 @@ Deno.serve(async (req) => {
 
       if (!licensees || licensees.length === 0) {
         return new Response(
-          JSON.stringify({ error: "CPF não encontrado ou acesso ao portal não configurado" }),
+          JSON.stringify({ error: "E-mail não encontrado ou acesso ao portal não configurado" }),
           { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
