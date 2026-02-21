@@ -18,6 +18,7 @@ interface DoctorEntry {
   netAmount: number;
   paidAmount: number;
   commission: number;
+  allocationCount: number;
 }
 
 interface Summary {
@@ -178,12 +179,12 @@ export default function LicenseeDashboard() {
                     {/* Desktop Table */}
                     <div className="hidden sm:block overflow-x-auto">
                       <Table>
-                        <TableHeader>
+                         <TableHeader>
                           <TableRow>
                             <TableHead>Médico</TableHead>
                             <TableHead>CRM</TableHead>
+                            <TableHead className="text-center">Lançamentos</TableHead>
                             <TableHead className="text-right">Faturamento Bruto</TableHead>
-                            <TableHead className="text-right">Valor Líquido</TableHead>
                             <TableHead className="text-right">Comissão ({commissionRate}%)</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -192,16 +193,16 @@ export default function LicenseeDashboard() {
                             <TableRow key={doctor.id}>
                               <TableCell className="font-medium">{doctor.name}</TableCell>
                               <TableCell>{doctor.crm}</TableCell>
+                              <TableCell className="text-center">{doctor.allocationCount}</TableCell>
                               <TableCell className="text-right">{formatCurrency(doctor.grossBilling)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(doctor.netAmount)}</TableCell>
                               <TableCell className="text-right font-semibold text-green-700">{formatCurrency(doctor.commission)}</TableCell>
                             </TableRow>
                           ))}
                           {/* Totals row */}
                           <TableRow className="border-t-2 font-bold">
                             <TableCell colSpan={2}>Total</TableCell>
+                            <TableCell className="text-center">{doctors.reduce((s, d) => s + d.allocationCount, 0)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(summary?.totalBilling || 0)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(doctors.reduce((s, d) => s + d.netAmount, 0))}</TableCell>
                             <TableCell className="text-right text-green-700">{formatCurrency(summary?.totalCommission || 0)}</TableCell>
                           </TableRow>
                         </TableBody>
@@ -214,7 +215,11 @@ export default function LicenseeDashboard() {
                         <div key={doctor.id} className="rounded-lg border p-3 space-y-2">
                           <div className="font-semibold">{doctor.name}</div>
                           <div className="text-sm text-muted-foreground">CRM: {doctor.crm}</div>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="grid grid-cols-3 gap-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Lançamentos:</span>
+                              <div className="font-medium">{doctor.allocationCount}</div>
+                            </div>
                             <div>
                               <span className="text-muted-foreground">Faturamento:</span>
                               <div className="font-medium">{formatCurrency(doctor.grossBilling)}</div>
