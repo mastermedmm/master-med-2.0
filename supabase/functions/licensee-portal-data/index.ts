@@ -91,18 +91,25 @@ Deno.serve(async (req) => {
 
       const doctorIds = doctors.map(d => d.id);
 
-      // Get all accounts_payable for these doctors
+      // Get all accounts_payable for these doctors, excluding cancelled invoices
       const { data: accountsPayable, error: apError } = await supabase
         .from("accounts_payable")
         .select("id, doctor_id, amount_to_pay, status, invoices(gross_value, net_value, status)")
-        .in("doctor_id", doctorIds);
+        .in("doctor_id", doctorIds)
+        .neq("status", "cancelado");
 
       if (apError) {
         console.error("Error fetching accounts payable:", apError);
       }
 
+      // Filter out APs whose invoice is cancelled
+      const validAPs = (accountsPayable || []).filter(ap => {
+        const invoice = ap.invoices as any;
+        return invoice?.status !== 'cancelado';
+      });
+
       // Get payments for these accounts
-      const accountIds = accountsPayable?.map(ap => ap.id) || [];
+      const accountIds = validAPs.map(ap => ap.id);
       let payments: any[] = [];
       if (accountIds.length > 0) {
         const { data: paymentsData } = await supabase
@@ -118,13 +125,13 @@ Deno.serve(async (req) => {
         paymentsByAccount[p.account_payable_id] = (paymentsByAccount[p.account_payable_id] || 0) + Number(p.amount);
       }
 
-      // Calculate per-doctor billing
+      // Calculate per-doctor billing - commission based on rateio (amount_to_pay)
       const commissionRate = Number(licensee.commission) / 100;
       let totalBilling = 0;
       let totalCommission = 0;
 
       const doctorResults = doctors.map(doctor => {
-        const doctorAPs = (accountsPayable || []).filter(ap => ap.doctor_id === doctor.id);
+        const doctorAPs = validAPs.filter(ap => ap.doctor_id === doctor.id);
         
         // Total gross billing from invoices
         const grossBilling = doctorAPs.reduce((sum, ap) => {
@@ -132,14 +139,14 @@ Deno.serve(async (req) => {
           return sum + (Number(invoice?.gross_value) || 0);
         }, 0);
 
-        // Total net amount to pay
+        // Total amount from rateio (allocation)
         const totalAmountToPay = doctorAPs.reduce((sum, ap) => sum + Number(ap.amount_to_pay), 0);
 
         // Total paid
         const totalPaid = doctorAPs.reduce((sum, ap) => sum + (paymentsByAccount[ap.id] || 0), 0);
 
-        // Commission based on gross billing
-        const commission = grossBilling * commissionRate;
+        // Commission based on rateio (amount_to_pay), not gross billing
+        const commission = totalAmountToPay * commissionRate;
 
         totalBilling += grossBilling;
         totalCommission += commission;
