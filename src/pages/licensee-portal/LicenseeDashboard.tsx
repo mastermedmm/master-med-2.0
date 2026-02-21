@@ -169,7 +169,7 @@ export default function LicenseeDashboard() {
         ) : (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
               <Card className="border-l-4 border-l-amber-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                   <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Médicos Vinculados</CardTitle>
@@ -178,6 +178,23 @@ export default function LicenseeDashboard() {
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                   <div className="text-lg sm:text-2xl font-bold text-amber-700">{doctors.length}</div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Médicos em sua carteira</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-purple-500">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">% Faturando</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-purple-600" />
+                </CardHeader>
+                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="text-lg sm:text-2xl font-bold text-purple-700">
+                    {doctors.length > 0
+                      ? `${Math.round((doctors.filter(d => d.allocationCount > 0).length / doctors.length) * 100)}%`
+                      : '0%'}
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
+                    {doctors.filter(d => d.allocationCount > 0).length} de {doctors.length} médicos
+                  </p>
                 </CardContent>
               </Card>
 
@@ -272,12 +289,6 @@ export default function LicenseeDashboard() {
                           </div>
                         </div>
                       ))}
-                      <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold">Total Comissão</span>
-                          <span className="font-bold text-green-700">{formatCurrency(summary?.totalCommission || 0)}</span>
-                        </div>
-                      </div>
                     </div>
                   </>
                 )}
