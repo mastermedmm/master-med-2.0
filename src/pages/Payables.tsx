@@ -534,14 +534,17 @@ export default function Payables() {
 
   // Calculate totals from filtered data
   const totals = useMemo(() => {
-    const totalRateado = filteredPayables.reduce((sum, p) => sum + Number(p.allocated_net_value), 0);
+    const nonCancelled = filteredPayables.filter(p => p.status !== 'cancelado');
+    const cancelled = filteredPayables.filter(p => p.status === 'cancelado');
+    const totalRateado = nonCancelled.reduce((sum, p) => sum + Number(p.allocated_net_value), 0);
     const totalPago = filteredPayables
       .filter(p => p.status === 'pago')
       .reduce((sum, p) => sum + Number(p.amount_to_pay), 0);
     const totalAberto = filteredPayables
       .filter(p => p.status === 'pendente')
       .reduce((sum, p) => sum + Number(p.amount_to_pay), 0);
-    return { totalRateado, totalPago, totalAberto };
+    const totalCancelado = cancelled.reduce((sum, p) => sum + Number(p.allocated_net_value), 0);
+    return { totalRateado, totalPago, totalAberto, totalCancelado, cancelledCount: cancelled.length, nonCancelledCount: nonCancelled.length };
   }, [filteredPayables]);
 
   const hasActiveFilters = filters.doctor || filters.company || filters.hospital || 
@@ -1205,7 +1208,7 @@ export default function Payables() {
       )}
 
       {/* Totalizer Cards */}
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
+      <div className="mb-6 grid gap-4 md:grid-cols-4">
         <Card className="stat-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Rateado</CardTitle>
@@ -1213,7 +1216,7 @@ export default function Payables() {
           <CardContent>
             <div className="text-2xl font-bold text-primary">{formatCurrency(totals.totalRateado)}</div>
             <p className="text-xs text-muted-foreground">
-              {filteredPayables.length} lançamento{filteredPayables.length !== 1 ? 's' : ''}
+              {totals.nonCancelledCount} lançamento{totals.nonCancelledCount !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
@@ -1236,6 +1239,17 @@ export default function Payables() {
             <div className="text-2xl font-bold text-warning">{formatCurrency(totals.totalAberto)}</div>
             <p className="text-xs text-muted-foreground">
               {pendingPayables.length} pendente{pendingPayables.length !== 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="stat-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Cancelado</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">{formatCurrency(totals.totalCancelado)}</div>
+            <p className="text-xs text-muted-foreground">
+              {totals.cancelledCount} cancelado{totals.cancelledCount !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
