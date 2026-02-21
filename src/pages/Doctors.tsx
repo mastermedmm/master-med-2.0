@@ -15,6 +15,7 @@ import { useTableSort } from '@/hooks/useTableSort';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { Plus, Pencil, Trash2, Loader2, Users, KeyRound, Check } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,6 +46,12 @@ interface Doctor {
   certificate_expires_at: string | null;
   linked_company: string | null;
   linked_company_2: string | null;
+  licensee_id: string | null;
+}
+
+interface LicenseeOption {
+  id: string;
+  name: string;
 }
 
 export default function Doctors() {
@@ -52,6 +59,7 @@ export default function Doctors() {
   const { tenantId } = useTenant();
   const { logEvent } = useAuditLog();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [licensees, setLicensees] = useState<LicenseeOption[]>([]);
   const [loading, setLoading] = useState(true);
   
   const { sortedData, requestSort, getSortDirection } = useTableSort(doctors);
@@ -99,13 +107,30 @@ export default function Doctors() {
     certificate_expires_at: '',
     linked_company: '',
     linked_company_2: '',
+    licensee_id: '',
   });
 
   useEffect(() => {
     if (tenantId) {
       loadDoctors();
+      loadLicensees();
     }
   }, [tenantId]);
+
+  const loadLicensees = async () => {
+    if (!tenantId) return;
+    try {
+      const { data } = await supabase
+        .from('licensees')
+        .select('id, name')
+        .eq('tenant_id', tenantId)
+        .eq('active', true)
+        .order('name');
+      setLicensees(data || []);
+    } catch (e) {
+      console.error('Error loading licensees:', e);
+    }
+  };
 
   const loadDoctors = async () => {
     if (!tenantId) return;
@@ -175,6 +200,7 @@ export default function Doctors() {
         certificate_expires_at: doctor.certificate_expires_at || '',
         linked_company: doctor.linked_company || '',
         linked_company_2: doctor.linked_company_2 || '',
+        licensee_id: doctor.licensee_id || '',
       });
     } else {
       setEditingDoctor(null);
@@ -198,6 +224,7 @@ export default function Doctors() {
         certificate_expires_at: '',
         linked_company: '',
         linked_company_2: '',
+        licensee_id: '',
       });
     }
     setIsDialogOpen(true);
@@ -236,6 +263,7 @@ export default function Doctors() {
         certificate_expires_at: formData.certificate_expires_at || null,
         linked_company: formData.linked_company || null,
         linked_company_2: formData.linked_company_2 || null,
+        licensee_id: formData.licensee_id || null,
       };
 
       if (editingDoctor) {
@@ -687,6 +715,23 @@ export default function Doctors() {
                       placeholder=""
                     />
                   </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="licensee_id">Licenciado (Parceiro)</Label>
+                  <Select
+                    value={formData.licensee_id || 'none'}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, licensee_id: value === 'none' ? '' : value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um licenciado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {licensees.map((l) => (
+                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch

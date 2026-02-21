@@ -35,6 +35,14 @@ export const ROUTES = {
     changePassword: '/portal-medico/alterar-senha',
   },
   
+  // Portal do Licenciado
+  licenseePortal: {
+    root: '/portal-licenciado',
+    login: '/portal-licenciado/login',
+    dashboard: '/portal-licenciado/painel',
+    changePassword: '/portal-licenciado/alterar-senha',
+  },
+  
   // Super Admin
   superAdmin: {
     root: '/super-admin',

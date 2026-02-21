@@ -6,6 +6,7 @@ import { BrowserRouter, HashRouter, Routes, Route, Navigate } from "react-router
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DoctorAuthProvider } from "@/contexts/DoctorAuthContext";
 import { TenantProvider } from "@/contexts/TenantContext";
+import { LicenseeAuthProvider } from "@/contexts/LicenseeAuthContext";
 import { SuperAdminAuthProvider } from "@/contexts/SuperAdminAuthContext";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { SuperAdminGuard } from "@/components/super-admin/SuperAdminGuard";
@@ -44,6 +45,11 @@ import NotFound from "./pages/NotFound";
 import DoctorLogin from "./pages/doctor-portal/DoctorLogin";
 import DoctorChangePassword from "./pages/doctor-portal/DoctorChangePassword";
 import DoctorDashboard from "./pages/doctor-portal/DoctorDashboard";
+
+// Licensee Portal Pages
+import LicenseeLogin from "./pages/licensee-portal/LicenseeLogin";
+import LicenseeChangePassword from "./pages/licensee-portal/LicenseeChangePassword";
+import LicenseeDashboard from "./pages/licensee-portal/LicenseeDashboard";
 
 // Super Admin Pages
 import SuperAdminLogin from "./pages/super-admin/SuperAdminLogin";
@@ -283,6 +289,12 @@ function AppRoutes() {
       <Route path={ROUTES.doctorPortal.dashboard} element={<DoctorDashboard />} />
       <Route path={ROUTES.doctorPortal.root} element={<Navigate to={ROUTES.doctorPortal.login} replace />} />
       
+      {/* Licensee Portal Routes */}
+      <Route path={ROUTES.licenseePortal.login} element={<LicenseeLogin />} />
+      <Route path={ROUTES.licenseePortal.changePassword} element={<LicenseeChangePassword />} />
+      <Route path={ROUTES.licenseePortal.dashboard} element={<LicenseeDashboard />} />
+      <Route path={ROUTES.licenseePortal.root} element={<Navigate to={ROUTES.licenseePortal.login} replace />} />
+      
       {/* Super Admin Portal Routes */}
       <Route path={ROUTES.superAdmin.login} element={<SuperAdminLogin />} />
       <Route
@@ -365,7 +377,9 @@ const App = () => (
           <AuthProvider>
             <TenantProvider>
               <DoctorAuthProvider>
-                <AppContent />
+                <LicenseeAuthProvider>
+                  <AppContent />
+                </LicenseeAuthProvider>
               </DoctorAuthProvider>
             </TenantProvider>
           </AuthProvider>
