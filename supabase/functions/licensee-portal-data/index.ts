@@ -91,12 +91,14 @@ Deno.serve(async (req) => {
 
       const doctorIds = doctors.map(d => d.id);
 
-      // Get all accounts_payable for these doctors, excluding cancelled invoices
+      // Get all accounts_payable for these doctors, excluding cancelled
       const { data: accountsPayable, error: apError } = await supabase
         .from("accounts_payable")
-        .select("id, doctor_id, amount_to_pay, status, invoices(gross_value, net_value, status)")
+        .select("id, doctor_id, amount_to_pay, status, invoice_id, invoices(gross_value, net_value, status)")
         .in("doctor_id", doctorIds)
         .neq("status", "cancelado");
+
+      console.log(`Found ${accountsPayable?.length || 0} APs for doctors: ${doctorIds.join(', ')}`, JSON.stringify(accountsPayable?.map(ap => ({ id: ap.id, doctor_id: ap.doctor_id, invoice_id: ap.invoice_id, status: ap.status }))));
 
       if (apError) {
         console.error("Error fetching accounts payable:", apError);
@@ -107,6 +109,7 @@ Deno.serve(async (req) => {
         const invoice = ap.invoices as any;
         return invoice?.status !== 'cancelado';
       });
+      console.log(`Valid APs after filtering cancelled invoices: ${validAPs.length}`);
 
       // Get payments for these accounts
       const accountIds = validAPs.map(ap => ap.id);
