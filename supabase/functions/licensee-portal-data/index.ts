@@ -42,10 +42,14 @@ Deno.serve(async (req) => {
     }
 
     let action = "";
+    let filterMonth: number | null = null;
+    let filterYear: number | null = null;
     if (req.method === "POST") {
       try {
         const body = await req.json();
         action = body.action || "";
+        filterMonth = body.month || null;
+        filterYear = body.year || null;
       } catch { action = ""; }
     }
 
@@ -92,11 +96,14 @@ Deno.serve(async (req) => {
       const doctorIds = doctors.map(d => d.id);
 
       // Get all accounts_payable for these doctors, excluding cancelled
-      const { data: accountsPayable, error: apError } = await supabase
+      // Build date range filter based on invoice issue_date
+      let apQuery = supabase
         .from("accounts_payable")
-        .select("id, doctor_id, amount_to_pay, status, invoice_id, invoices(gross_value, net_value, status)")
+        .select("id, doctor_id, amount_to_pay, status, invoice_id, invoices(gross_value, net_value, status, issue_date)")
         .in("doctor_id", doctorIds)
         .neq("status", "cancelado");
+
+      const { data: accountsPayable, error: apError } = await apQuery;
 
       console.log(`Found ${accountsPayable?.length || 0} APs for doctors: ${doctorIds.join(', ')}`, JSON.stringify(accountsPayable?.map(ap => ({ id: ap.id, doctor_id: ap.doctor_id, invoice_id: ap.invoice_id, status: ap.status }))));
 
@@ -104,10 +111,16 @@ Deno.serve(async (req) => {
         console.error("Error fetching accounts payable:", apError);
       }
 
-      // Filter out APs whose invoice is cancelled
+      // Filter out APs whose invoice is cancelled + apply month/year filter
       const validAPs = (accountsPayable || []).filter(ap => {
         const invoice = ap.invoices as any;
-        return invoice?.status !== 'cancelado';
+        if (invoice?.status === 'cancelado') return false;
+        // Filter by month/year on invoice issue_date
+        if (filterMonth && filterYear && invoice?.issue_date) {
+          const issueDate = new Date(invoice.issue_date + 'T00:00:00');
+          if (issueDate.getMonth() + 1 !== filterMonth || issueDate.getFullYear() !== filterYear) return false;
+        }
+        return true;
       });
       console.log(`Valid APs after filtering cancelled invoices: ${validAPs.length}`);
 

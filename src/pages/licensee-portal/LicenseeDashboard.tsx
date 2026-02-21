@@ -7,7 +7,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useLicenseeAuth } from '@/contexts/LicenseeAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogOut, Handshake, TrendingUp, Users, RefreshCw } from 'lucide-react';
+import { Loader2, LogOut, Handshake, TrendingUp, Users, RefreshCw, CalendarDays } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const MONTHS = [
+  { value: '1', label: 'Janeiro' }, { value: '2', label: 'Fevereiro' },
+  { value: '3', label: 'Março' }, { value: '4', label: 'Abril' },
+  { value: '5', label: 'Maio' }, { value: '6', label: 'Junho' },
+  { value: '7', label: 'Julho' }, { value: '8', label: 'Agosto' },
+  { value: '9', label: 'Setembro' }, { value: '10', label: 'Outubro' },
+  { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' },
+];
+
+const currentDate = new Date();
+const currentYear = currentDate.getFullYear();
+const YEARS = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
 interface DoctorEntry {
   id: string;
@@ -37,6 +51,8 @@ export default function LicenseeDashboard() {
   const [commissionRate, setCommissionRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>(String(currentDate.getMonth() + 1));
+  const [selectedYear, setSelectedYear] = useState<string>(String(currentYear));
 
   useEffect(() => {
     if (!authLoading && !licensee) navigate(ROUTES.licenseePortal.login, { replace: true });
@@ -48,7 +64,7 @@ export default function LicenseeDashboard() {
 
   useEffect(() => {
     if (licensee && !mustChangePassword) loadData();
-  }, [licensee, mustChangePassword]);
+  }, [licensee, mustChangePassword, selectedMonth, selectedYear]);
 
   const getToken = () => localStorage.getItem(SESSION_KEY);
 
@@ -59,7 +75,7 @@ export default function LicenseeDashboard() {
     try {
       const { data, error } = await supabase.functions.invoke('licensee-portal-data', {
         headers: { Authorization: `Bearer ${token}` },
-        body: { action: 'doctors' },
+        body: { action: 'doctors', month: parseInt(selectedMonth), year: parseInt(selectedYear) },
       });
 
       if (error) {
@@ -121,6 +137,31 @@ export default function LicenseeDashboard() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Month/Year Filter */}
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[130px] sm:w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTHS.map((m) => (
+                <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger className="w-[90px] sm:w-[110px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {YEARS.map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
