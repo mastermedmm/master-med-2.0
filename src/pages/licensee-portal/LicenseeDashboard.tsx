@@ -44,7 +44,7 @@ const SESSION_KEY = 'licensee_portal_session';
 
 export default function LicenseeDashboard() {
   const navigate = useNavigate();
-  const { licensee, tenant, logout, loading: authLoading, mustChangePassword } = useLicenseeAuth();
+  const { licensee, logout, loading: authLoading, mustChangePassword } = useLicenseeAuth();
   const { toast } = useToast();
   const [doctors, setDoctors] = useState<DoctorEntry[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -121,7 +121,7 @@ export default function LicenseeDashboard() {
                 <Handshake className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <h1 className="font-semibold text-gray-900">{tenant?.name || 'Portal do Licenciado'}</h1>
+                <h1 className="font-semibold text-gray-900">MASTERSYSTEM</h1>
                 <p className="text-sm text-gray-500">{licensee?.name}</p>
               </div>
             </div>
