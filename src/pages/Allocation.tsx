@@ -272,7 +272,7 @@ export default function Allocation() {
         description: 'O rateio foi salvo e os lançamentos foram gerados',
       });
 
-      navigate(ROUTES.payables);
+      navigate(ROUTES.allocation);
     } catch (error: any) {
       console.error('Error saving allocation:', error);
       toast({
