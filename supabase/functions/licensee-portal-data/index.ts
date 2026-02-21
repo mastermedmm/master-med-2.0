@@ -194,13 +194,32 @@ Deno.serve(async (req) => {
         };
       });
 
-      console.log(`Returning ${doctorResults.length} doctors for licensee ${licenseeId}`);
+      // Get available years from invoices linked to these doctors' APs
+      const { data: allAPsForYears } = await supabase
+        .from("accounts_payable")
+        .select("invoice_id, invoices(issue_date)")
+        .in("doctor_id", doctorIds);
+
+      const yearsSet = new Set<number>();
+      for (const ap of (allAPsForYears || [])) {
+        const invoice = ap.invoices as any;
+        if (invoice?.issue_date) {
+          const year = new Date(invoice.issue_date + 'T00:00:00').getFullYear();
+          yearsSet.add(year);
+        }
+      }
+      // Always include current year
+      yearsSet.add(new Date().getFullYear());
+      const availableYears = Array.from(yearsSet).sort((a, b) => b - a);
+
+      console.log(`Returning ${doctorResults.length} doctors for licensee ${licenseeId}, available years: ${availableYears}`);
 
       return new Response(
         JSON.stringify({
           doctors: doctorResults,
           summary: { totalBilling, totalCommission, totalCancelled },
           commissionRate: licensee.commission,
+          availableYears,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
