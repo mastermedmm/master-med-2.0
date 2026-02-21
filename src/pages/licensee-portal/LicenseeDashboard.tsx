@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useLicenseeAuth } from '@/contexts/LicenseeAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogOut, Handshake, TrendingUp, Users, RefreshCw, CalendarDays } from 'lucide-react';
+import { Loader2, LogOut, Handshake, TrendingUp, Users, RefreshCw, CalendarDays, Ban } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const MONTHS = [
@@ -38,6 +38,7 @@ interface DoctorEntry {
 interface Summary {
   totalBilling: number;
   totalCommission: number;
+  totalCancelled: number;
 }
 
 const SESSION_KEY = 'licensee_portal_session';
@@ -169,7 +170,7 @@ export default function LicenseeDashboard() {
         ) : (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
               <Card className="border-l-4 border-l-amber-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
                   <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Médicos Vinculados</CardTitle>
@@ -217,6 +218,17 @@ export default function LicenseeDashboard() {
                 <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                   <div className="text-lg sm:text-2xl font-bold text-green-700">{formatCurrency(summary?.totalCommission || 0)}</div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Sua comissão sobre o faturamento</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-red-500">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                  <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Cancelado</CardTitle>
+                  <Ban className="h-4 w-4 text-red-600" />
+                </CardHeader>
+                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                  <div className="text-lg sm:text-2xl font-bold text-red-700">{formatCurrency(summary?.totalCancelled || 0)}</div>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">Notas canceladas no período</p>
                 </CardContent>
               </Card>
             </div>

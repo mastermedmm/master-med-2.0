@@ -111,18 +111,32 @@ Deno.serve(async (req) => {
         console.error("Error fetching accounts payable:", apError);
       }
 
-      // Filter out APs whose invoice is cancelled + apply month/year filter
-      const validAPs = (accountsPayable || []).filter(ap => {
+      // Separate cancelled APs and valid APs, applying month/year filter to both
+      const allAPs = (accountsPayable || []);
+      const cancelledAPs: any[] = [];
+      const validAPs: any[] = [];
+
+      for (const ap of allAPs) {
         const invoice = ap.invoices as any;
-        if (invoice?.status === 'cancelado') return false;
-        // Filter by month/year on invoice issue_date
+        // Apply month/year filter
         if (filterMonth && filterYear && invoice?.issue_date) {
           const issueDate = new Date(invoice.issue_date + 'T00:00:00');
-          if (issueDate.getMonth() + 1 !== filterMonth || issueDate.getFullYear() !== filterYear) return false;
+          if (issueDate.getMonth() + 1 !== filterMonth || issueDate.getFullYear() !== filterYear) continue;
         }
-        return true;
-      });
-      console.log(`Valid APs after filtering cancelled invoices: ${validAPs.length}`);
+        if (invoice?.status === 'cancelado' || ap.status === 'cancelado') {
+          cancelledAPs.push(ap);
+        } else {
+          validAPs.push(ap);
+        }
+      }
+
+      // Calculate total cancelled
+      const totalCancelled = cancelledAPs.reduce((sum: number, ap: any) => {
+        const invoice = ap.invoices as any;
+        return sum + (Number(invoice?.gross_value) || 0);
+      }, 0);
+
+      console.log(`Valid APs: ${validAPs.length}, Cancelled APs: ${cancelledAPs.length}`);
 
       // Get payments for these accounts
       const accountIds = validAPs.map(ap => ap.id);
@@ -185,7 +199,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           doctors: doctorResults,
-          summary: { totalBilling, totalCommission },
+          summary: { totalBilling, totalCommission, totalCancelled },
           commissionRate: licensee.commission,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
