@@ -51,7 +51,7 @@ const SESSION_KEY = 'doctor_portal_session';
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
-  const { doctor, logout, loading: authLoading, mustChangePassword } = useDoctorAuth();
+  const { doctor, tenant, logout, loading: authLoading, mustChangePassword } = useDoctorAuth();
   const { toast } = useToast();
   
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -268,7 +268,7 @@ export default function DoctorDashboard() {
                 <Stethoscope className="h-5 w-5 text-teal-600" />
               </div>
               <div>
-                <h1 className="font-semibold text-gray-900">MASTERSYSTEM</h1>
+                <h1 className="font-semibold text-gray-900">{tenant?.name || 'Portal do Médico'}</h1>
                 <p className="text-sm text-gray-500">{doctor?.name}</p>
               </div>
             </div>
