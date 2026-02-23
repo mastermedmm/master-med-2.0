@@ -265,8 +265,8 @@ export default function AllocationList() {
     // Use filtered invoices when filters are active, otherwise use all invoices
     const source = hasActiveFilters ? filteredInvoices : invoices;
     const total = source.length;
-    const allocated = source.filter(inv => (inv._allocations_count ?? 0) > 0).length;
-    const pendingAllocation = total - allocated;
+    const allocated = source.filter(inv => inv.status !== 'cancelado' && (inv._allocations_count ?? 0) > 0).length;
+    const pendingAllocation = source.filter(inv => inv.status !== 'cancelado' && (inv._allocations_count ?? 0) === 0).length;
     const pendingReceipt = source.filter(inv => inv.status !== 'recebido').length;
     const totalGrossValue = source.reduce((sum, inv) => sum + Number(inv.gross_value), 0);
     const cancelled = source.filter(inv => inv.status === 'cancelado').length;
