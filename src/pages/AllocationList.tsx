@@ -25,7 +25,7 @@ import { useTableSort } from '@/hooks/useTableSort';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import { TablePagination } from '@/components/ui/table-pagination';
-import { FileSearch, PieChart, Loader2, FileUp, Eye, MoreHorizontal, RotateCcw, AlertTriangle, Trash2, Filter, X, CheckCircle, CalendarIcon } from 'lucide-react';
+import { FileSearch, PieChart, Loader2, FileUp, Eye, MoreHorizontal, RotateCcw, AlertTriangle, Trash2, Filter, X, CheckCircle, CalendarIcon, Ban } from 'lucide-react';
 import { InvoiceViewer } from '@/components/invoice/InvoiceViewer';
 interface Invoice {
   id: string;
@@ -111,6 +111,11 @@ export default function AllocationList() {
   const [deleteInfo, setDeleteInfo] = useState<{ hasAllocations: boolean; hasPayments: boolean } | null>(null);
   const [checkingDelete, setCheckingDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Cancel invoice dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [invoiceToCancel, setInvoiceToCancel] = useState<Invoice | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Filter logic
   const filteredInvoices = useMemo(() => {
@@ -502,6 +507,63 @@ export default function AllocationList() {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  // Cancel invoice handlers
+  const handleOpenCancelDialog = (invoice: Invoice) => {
+    setInvoiceToCancel(invoice);
+    setCancelDialogOpen(true);
+  };
+
+  const handleCloseCancelDialog = () => {
+    setCancelDialogOpen(false);
+    setInvoiceToCancel(null);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!invoiceToCancel || !tenantId) return;
+
+    setIsCancelling(true);
+
+    try {
+      // If invoice has allocations, cancel the accounts_payable entries
+      if (invoiceToCancel._allocations_count && invoiceToCancel._allocations_count > 0) {
+        const { error: payablesError } = await supabase
+          .from('accounts_payable')
+          .update({ status: 'cancelado' as any })
+          .eq('invoice_id', invoiceToCancel.id)
+          .eq('tenant_id', tenantId);
+
+        if (payablesError) throw payablesError;
+      }
+
+      // Log the cancellation
+      await logEvent({
+        action: 'UPDATE',
+        tableName: 'invoices',
+        recordId: invoiceToCancel.id,
+        recordLabel: `Cancelamento NF ${invoiceToCancel.invoice_number} - ${invoiceToCancel.company_name}`,
+        oldData: { status: 'active' },
+        newData: { status: 'cancelled', accounts_payable_cancelled: !!(invoiceToCancel._allocations_count && invoiceToCancel._allocations_count > 0) },
+      });
+
+      toast({
+        title: 'NF cancelada!',
+        description: `A nota ${invoiceToCancel.invoice_number} foi cancelada${invoiceToCancel._allocations_count && invoiceToCancel._allocations_count > 0 ? ' e os lançamentos foram cancelados' : ''}.`,
+      });
+
+      handleCloseCancelDialog();
+      loadInvoices();
+    } catch (error: any) {
+      console.error('Error cancelling invoice:', error);
+      toast({
+        title: 'Erro ao cancelar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -931,6 +993,13 @@ export default function AllocationList() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Excluir Nota
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleOpenCancelDialog(invoice)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Ban className="h-4 w-4 mr-2" />
+                            Cancelar NF
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -1127,6 +1196,59 @@ export default function AllocationList() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Invoice Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={handleCloseCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancelar Nota Fiscal</DialogTitle>
+            <DialogDescription>
+              {invoiceToCancel && (
+                <>Nota {invoiceToCancel.invoice_number} - {invoiceToCancel.company_name}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <Ban className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-destructive">Confirmar cancelamento da NF?</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Esta ação irá cancelar a nota fiscal
+                  {invoiceToCancel?._allocations_count && invoiceToCancel._allocations_count > 0 ? (
+                    <> e <strong>todos os lançamentos (contas a pagar)</strong> vinculados ao rateio desta nota</>
+                  ) : (
+                    <> (sem rateio vinculado)</>
+                  )}.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseCancelDialog}>
+                Voltar
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleConfirmCancel}
+                disabled={isCancelling}
+              >
+                {isCancelling ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Cancelando...
+                  </>
+                ) : (
+                  <>
+                    <Ban className="h-4 w-4 mr-2" />
+                    Confirmar Cancelamento
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </AppLayout>
