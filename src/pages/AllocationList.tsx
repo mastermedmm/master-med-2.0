@@ -269,7 +269,11 @@ export default function AllocationList() {
     const pendingAllocation = total - allocated;
     const pendingReceipt = source.filter(inv => inv.status !== 'recebido').length;
     const totalGrossValue = source.reduce((sum, inv) => sum + Number(inv.gross_value), 0);
-    return { total, allocated, pendingAllocation, pendingReceipt, totalGrossValue };
+    const cancelled = source.filter(inv => inv.status === 'cancelado').length;
+    const cancelledGrossValue = source.filter(inv => inv.status === 'cancelado').reduce((sum, inv) => sum + Number(inv.gross_value), 0);
+    const validCount = total - cancelled;
+    const validGrossValue = totalGrossValue - cancelledGrossValue;
+    return { total, allocated, pendingAllocation, pendingReceipt, totalGrossValue, cancelled, cancelledGrossValue, validCount, validGrossValue };
   }, [invoices, filteredInvoices, hasActiveFilters]);
 
   const clearFilters = () => {
@@ -668,7 +672,7 @@ export default function AllocationList() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <Card className="stat-card">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
@@ -748,6 +752,38 @@ export default function AllocationList() {
                 Filtro ativo
               </Badge>
             )}
+          </CardContent>
+        </Card>
+        <Card className="stat-card">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Notas Canceladas</p>
+                <p className="text-2xl font-bold text-destructive">{stats.cancelled}</p>
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  {formatCurrency(stats.cancelledGrossValue)}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Ban className="h-5 w-5 text-destructive" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="stat-card">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Válidas</p>
+                <p className="text-2xl font-bold text-success">{stats.validCount}</p>
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  {formatCurrency(stats.validGrossValue)}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-success" />
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
