@@ -203,8 +203,17 @@ export default function AllocationList() {
     });
   }, [invoices, filters]);
 
+  // Restore sort config from sessionStorage
+  const savedSortConfig = useMemo(() => {
+    const saved = sessionStorage.getItem('allocationListSort');
+    if (saved) {
+      try { return JSON.parse(saved); } catch { return undefined; }
+    }
+    return undefined;
+  }, []);
+
   // Sorting - custom compare for invoice_number (numeric sort)
-  const { sortedData, requestSort, getSortDirection } = useTableSort(filteredInvoices, undefined, (a, b, key) => {
+  const { sortedData, sortConfig, requestSort, getSortDirection } = useTableSort(filteredInvoices, savedSortConfig, (a, b, key) => {
     if (key === 'invoice_number') {
       const numA = parseInt(String(a[key]).replace(/\D/g, ''), 10) || 0;
       const numB = parseInt(String(b[key]).replace(/\D/g, ''), 10) || 0;
@@ -224,6 +233,12 @@ export default function AllocationList() {
     }
     return String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase(), 'pt-BR');
   });
+
+  // Persist sort config to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('allocationListSort', JSON.stringify(sortConfig));
+  }, [sortConfig]);
+
   const {
     paginatedData,
     currentPage,
