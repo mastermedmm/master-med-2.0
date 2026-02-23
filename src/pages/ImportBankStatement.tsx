@@ -32,7 +32,7 @@ interface Bank {
 
 export default function ImportBankStatement() {
   const navigate = useNavigate();
-  useTenant();
+  const { tenantId } = useTenant();
   const { isLoading: isImporting, importOFXTransactions } = useImportedTransactions();
 
   // State
@@ -47,15 +47,17 @@ export default function ImportBankStatement() {
 
   // Load banks
   useEffect(() => {
+    if (!tenantId) return;
     const loadBanks = async () => {
       const { data } = await supabase
         .from('banks')
         .select('id, name, agency, account_number')
+        .eq('tenant_id', tenantId)
         .order('name');
       setBanks(data || []);
     };
     loadBanks();
-  }, []);
+  }, [tenantId]);
 
   // File handling
   const handleDragOver = (e: React.DragEvent) => {
