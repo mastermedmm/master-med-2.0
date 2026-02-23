@@ -663,14 +663,14 @@ export default function ReconcileTransactions() {
                     {/* Adjustment section when values differ */}
                     {selectedInvoices.length > 0 && multiInvoiceSummary.hasAdjustment && (
                       <div className="space-y-3 p-4 border rounded-md bg-muted/30">
-                        {Math.abs(multiInvoiceSummary.difference) > 200 ? (
+                        {Math.abs(multiInvoiceSummary.difference) > 500 ? (
                           // Adjustment too large - not allowed
                           <div className="flex items-center gap-2 text-sm font-medium text-destructive">
                             <AlertCircle className="h-4 w-4" />
                             <div>
-                              <p>Diferença de {formatCurrency(multiInvoiceSummary.difference)} excede o limite de R$ 200,00</p>
+                              <p>Diferença de {formatCurrency(multiInvoiceSummary.difference)} excede o limite de R$ 500,00</p>
                               <p className="text-xs font-normal text-muted-foreground mt-1">
-                                Selecione notas que totalizem exatamente o valor do crédito ou com diferença de até R$ 200,00
+                                Selecione notas que totalizem exatamente o valor do crédito ou com diferença de até R$ 500,00
                               </p>
                             </div>
                           </div>
