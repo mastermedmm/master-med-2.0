@@ -782,7 +782,7 @@ export default function ReconcileTransactions() {
                     disabled={
                       isLoading || 
                       selectedInvoices.length === 0 || 
-                      (multiInvoiceSummary.hasAdjustment && Math.abs(multiInvoiceSummary.difference) > 200) ||
+                      (multiInvoiceSummary.hasAdjustment && Math.abs(multiInvoiceSummary.difference) > 500) ||
                       (multiInvoiceSummary.hasAdjustment && !adjustmentReason.trim())
                     }
                   >
