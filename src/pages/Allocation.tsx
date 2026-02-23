@@ -128,6 +128,10 @@ export default function Allocation() {
   };
 
   const addAllocation = () => {
+    // Don't add if there's already an empty/incomplete line
+    const hasEmptyLine = allocations.some(a => !a.doctorId || parseCurrency(a.allocatedNetValue) === 0);
+    if (hasEmptyLine) return;
+
     setAllocations(prev => [...prev, {
       id: crypto.randomUUID(),
       doctorId: '',
@@ -194,10 +198,15 @@ export default function Allocation() {
     return Number(invoice.gross_value) - getTotalAllocated();
   };
 
+  const getActiveAllocations = () => {
+    return allocations.filter(a => a.doctorId || parseCurrency(a.allocatedNetValue) > 0);
+  };
+
   const isValid = () => {
+    const active = getActiveAllocations();
     const diff = Math.abs(getDifference());
-    const hasAllocations = allocations.length > 0;
-    const allValid = allocations.every(a => a.doctorId && parseCurrency(a.allocatedNetValue) > 0);
+    const hasAllocations = active.length > 0;
+    const allValid = active.every(a => a.doctorId && parseCurrency(a.allocatedNetValue) > 0);
     return diff <= 0.01 && hasAllocations && allValid;
   };
 
@@ -218,8 +227,9 @@ export default function Allocation() {
       await supabase.from('invoice_allocations').delete().eq('invoice_id', invoice.id);
       await supabase.from('accounts_payable').delete().eq('invoice_id', invoice.id);
 
-      // Create new allocations with values
-      const allocationData = allocations.map(a => ({
+      // Filter out empty lines and create new allocations with values
+      const activeAllocations = getActiveAllocations();
+      const allocationData = activeAllocations.map(a => ({
         invoice_id: invoice.id,
         doctor_id: a.doctorId,
         allocated_net_value: parseCurrency(a.allocatedNetValue),
