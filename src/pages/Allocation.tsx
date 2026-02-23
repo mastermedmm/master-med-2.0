@@ -396,7 +396,7 @@ export default function Allocation() {
             <CardTitle className="text-sm">Rateio</CardTitle>
             <CardDescription className="text-xs">Adicione os médicos e seus valores</CardDescription>
           </div>
-          <Button size="sm" onClick={addAllocation}>
+          <Button size="sm" onClick={addAllocation} disabled={allocations.length > 0 && Math.abs(getDifference()) <= 0.01}>
             <Plus className="mr-1 h-3 w-3" />
             Adicionar
           </Button>
