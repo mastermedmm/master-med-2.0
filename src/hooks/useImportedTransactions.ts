@@ -136,7 +136,7 @@ export function useImportedTransactions() {
             bank_id: bankId,
             import_id: importRecord.id,
             external_id: transaction.id,
-            transaction_date: toBrasiliaDate(transaction.date),
+            transaction_date: transaction.dateString,
             amount: transaction.amount,
             transaction_type: transaction.type,
             description: transaction.description,
