@@ -193,16 +193,18 @@ export default function AllocationList() {
   }), [invoices]);
 
   // Stats for cards
-  const stats = useMemo(() => {
-    const total = invoices.length;
-    const allocated = invoices.filter(inv => (inv._allocations_count ?? 0) > 0).length;
-    const pendingAllocation = total - allocated;
-    // Pending receipt = invoices that are NOT fully received (pendente or parcialmente_recebido)
-    const pendingReceipt = invoices.filter(inv => inv.status !== 'recebido').length;
-    return { total, allocated, pendingAllocation, pendingReceipt };
-  }, [invoices]);
-
   const hasActiveFilters = filters.company || filters.hospital || filters.invoiceNumber || filters.cnpj || filters.dateFrom || filters.dateTo || filters.statusFilter !== 'all' || filters.allocationFilter !== 'all';
+
+  const stats = useMemo(() => {
+    // Use filtered invoices when filters are active, otherwise use all invoices
+    const source = hasActiveFilters ? filteredInvoices : invoices;
+    const total = source.length;
+    const allocated = source.filter(inv => (inv._allocations_count ?? 0) > 0).length;
+    const pendingAllocation = total - allocated;
+    const pendingReceipt = source.filter(inv => inv.status !== 'recebido').length;
+    const totalGrossValue = source.reduce((sum, inv) => sum + Number(inv.gross_value), 0);
+    return { total, allocated, pendingAllocation, pendingReceipt, totalGrossValue };
+  }, [invoices, filteredInvoices, hasActiveFilters]);
 
   const clearFilters = () => {
     setFilters({ company: '', hospital: '', invoiceNumber: '', cnpj: '', dateFrom: undefined, dateTo: undefined, statusFilter: 'all', allocationFilter: 'all' });
@@ -605,8 +607,13 @@ export default function AllocationList() {
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Notas Importadas</p>
+                <p className="text-xs font-medium text-muted-foreground">
+                  {hasActiveFilters ? 'Notas Filtradas' : 'Notas Importadas'}
+                </p>
                 <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  {formatCurrency(stats.totalGrossValue)}
+                </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <FileSearch className="h-5 w-5 text-primary" />
