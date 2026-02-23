@@ -203,8 +203,27 @@ export default function AllocationList() {
     });
   }, [invoices, filters]);
 
-  // Sorting
-  const { sortedData, requestSort, getSortDirection } = useTableSort(filteredInvoices);
+  // Sorting - custom compare for invoice_number (numeric sort)
+  const { sortedData, requestSort, getSortDirection } = useTableSort(filteredInvoices, undefined, (a, b, key) => {
+    if (key === 'invoice_number') {
+      const numA = parseInt(String(a[key]).replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(String(b[key]).replace(/\D/g, ''), 10) || 0;
+      return numA - numB;
+    }
+    // Default comparison for other keys
+    const aVal = a[key];
+    const bVal = b[key];
+    if (aVal == null && bVal == null) return 0;
+    if (aVal == null) return 1;
+    if (bVal == null) return -1;
+    if (typeof aVal === 'number' && typeof bVal === 'number') return aVal - bVal;
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
+      const dateA = Date.parse(aVal);
+      const dateB = Date.parse(bVal);
+      if (!isNaN(dateA) && !isNaN(dateB) && aVal.includes('-')) return dateA - dateB;
+    }
+    return String(aVal).toLowerCase().localeCompare(String(bVal).toLowerCase(), 'pt-BR');
+  });
   const {
     paginatedData,
     currentPage,
