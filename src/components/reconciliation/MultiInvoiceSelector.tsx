@@ -124,50 +124,51 @@ export function MultiInvoiceSelector({
 
       if (error) throw error;
 
-      const transformed = (data || [])
-        .filter((item: any) => {
-          // STRICT tenant isolation (defense in depth): only include invoices that belong
-          // to the currently active tenant.
-          //
-          // Important: if invoice.tenant_id is NULL (legacy/bad data) we must exclude it,
-          // otherwise super-admin sessions could see cross-tenant rows.
-          if (!tenantId) return false;
-          if (!item.invoices?.tenant_id) return false;
-          if (item.invoices.tenant_id !== tenantId) return false;
+      // Deduplicate by invoice_id — a single invoice may have multiple allocations (one per doctor)
+      // but for receipt purposes we only care about the invoice-level pending balance.
+      const invoiceMap = new Map<string, any>();
+      
+      (data || []).forEach((item: any) => {
+        if (!tenantId) return;
+        if (!item.invoices?.tenant_id) return;
+        if (item.invoices.tenant_id !== tenantId) return;
+        if (
+          item.invoices?.status !== "pendente" &&
+          item.invoices?.status !== "parcialmente_recebido"
+        ) return;
 
-          return (
-            item.invoices?.status === "pendente" ||
-            item.invoices?.status === "parcialmente_recebido"
-          );
-        })
-        .map((item: any) => {
-          const netValue = Number(item.invoices.net_value);
-          const totalReceived = Number(item.invoices.total_received || 0);
-          const pendingBalance = netValue - totalReceived;
-          
-          return {
-            id: item.id,
-            invoice_id: item.invoice_id,
-            allocated_net_value: item.allocated_net_value,
-            amount_to_pay: item.amount_to_pay,
-            totalReceived,
-            pendingBalance,
-            invoice: {
-              invoice_number: item.invoices.invoice_number,
-              company_name: item.invoices.company_name,
-              hospital_name: item.invoices.hospital_name,
-              hospital_cnpj: item.invoices.hospitals?.document || null,
-              payer_cnpj_1: item.invoices.hospitals?.payer_cnpj_1 || null,
-              payer_cnpj_2: item.invoices.hospitals?.payer_cnpj_2 || null,
-              issue_date: item.invoices.issue_date,
-              net_value: netValue,
-              total_received: totalReceived,
-              expected_receipt_date: item.invoices.expected_receipt_date,
-              status: item.invoices.status,
-              issuer_name: item.invoices.issuers?.name || null,
-            },
-          };
+        // Keep only the first allocation per invoice (we use invoice-level data anyway)
+        if (invoiceMap.has(item.invoice_id)) return;
+
+        const netValue = Number(item.invoices.net_value);
+        const totalReceived = Number(item.invoices.total_received || 0);
+        const pendingBalance = netValue - totalReceived;
+
+        invoiceMap.set(item.invoice_id, {
+          id: item.id,
+          invoice_id: item.invoice_id,
+          allocated_net_value: item.allocated_net_value,
+          amount_to_pay: item.amount_to_pay,
+          totalReceived,
+          pendingBalance,
+          invoice: {
+            invoice_number: item.invoices.invoice_number,
+            company_name: item.invoices.company_name,
+            hospital_name: item.invoices.hospital_name,
+            hospital_cnpj: item.invoices.hospitals?.document || null,
+            payer_cnpj_1: item.invoices.hospitals?.payer_cnpj_1 || null,
+            payer_cnpj_2: item.invoices.hospitals?.payer_cnpj_2 || null,
+            issue_date: item.invoices.issue_date,
+            net_value: netValue,
+            total_received: totalReceived,
+            expected_receipt_date: item.invoices.expected_receipt_date,
+            status: item.invoices.status,
+            issuer_name: item.invoices.issuers?.name || null,
+          },
         });
+      });
+
+      const transformed = Array.from(invoiceMap.values());
 
       setAllocations(transformed);
     } catch (error) {
