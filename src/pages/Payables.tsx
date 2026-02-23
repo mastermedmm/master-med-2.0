@@ -945,24 +945,9 @@ export default function Payables() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem 
-                        onClick={() => openPaymentDialog(payable)}
-                        disabled={payable.status === 'pago' || payable.status === 'cancelado'}
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Pagar
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate(`/payables/${payable.id}`)}>
                         <Eye className="h-4 w-4 mr-2" />
                         Ver Histórico
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => openDialog(payable, 'cancel')}
-                        className="text-destructive focus:text-destructive"
-                        disabled={payable.status === 'pago' || payable.status === 'cancelado'}
-                      >
-                        <XCircle className="h-4 w-4 mr-2" />
-                        Cancelar
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
