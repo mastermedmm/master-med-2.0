@@ -85,18 +85,50 @@ export default function AllocationList() {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<Invoice | null>(null);
   
-  // Filter state
-  const [filters, setFilters] = useState<Filters>({
-    company: '',
-    hospital: '',
-    invoiceNumber: '',
-    cnpj: '',
-    dateFrom: undefined,
-    dateTo: undefined,
-    statusFilter: 'all',
-    allocationFilter: 'all',
+  // Filter state - restore from sessionStorage if available
+  const [filters, setFilters] = useState<Filters>(() => {
+    try {
+      const saved = sessionStorage.getItem('allocationListFilters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          dateFrom: parsed.dateFrom ? new Date(parsed.dateFrom) : undefined,
+          dateTo: parsed.dateTo ? new Date(parsed.dateTo) : undefined,
+        };
+      }
+    } catch {}
+    return {
+      company: '',
+      hospital: '',
+      invoiceNumber: '',
+      cnpj: '',
+      dateFrom: undefined,
+      dateTo: undefined,
+      statusFilter: 'all',
+      allocationFilter: 'all',
+    };
   });
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('allocationListFilters');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return !!(parsed.company || parsed.hospital || parsed.invoiceNumber || parsed.cnpj || parsed.dateFrom || parsed.dateTo || parsed.allocationFilter !== 'all');
+      }
+    } catch {}
+    return false;
+  });
+
+  // Persist filters to sessionStorage whenever they change
+  useEffect(() => {
+    const toSave = {
+      ...filters,
+      dateFrom: filters.dateFrom?.toISOString() ?? null,
+      dateTo: filters.dateTo?.toISOString() ?? null,
+    };
+    sessionStorage.setItem('allocationListFilters', JSON.stringify(toSave));
+  }, [filters]);
   
   // Reversal dialog state
   const [reversalDialogOpen, setReversalDialogOpen] = useState(false);
