@@ -198,7 +198,7 @@ export function MultiInvoiceSelector({
 
   const withMatch = sorted.map((a) => ({
     ...a,
-    isExactMatch: Math.abs(a.pendingBalance - transactionAmount) < 0.01,
+    isExactMatch: Math.abs(a.pendingBalance - transactionAmount) <= 1000,
     isPartial: a.totalReceived > 0,
   }));
 
