@@ -6,6 +6,7 @@
 export interface OFXTransaction {
   id: string;           // FITID - unique transaction ID
   date: Date;           // DTPOSTED - transaction date
+  dateString: string;   // DTPOSTED as YYYY-MM-DD string (timezone-safe)
   amount: number;       // TRNAMT - transaction amount (positive=credit, negative=debit)
   type: 'credit' | 'debit';
   description: string;  // MEMO or NAME - transaction description
@@ -33,8 +34,8 @@ export interface OFXData {
 /**
  * Parse OFX date format (YYYYMMDD or YYYYMMDDHHMMSS)
  */
-function parseOFXDate(dateStr: string): Date {
-  if (!dateStr) return new Date();
+function parseOFXDate(dateStr: string): { date: Date; dateString: string } {
+  if (!dateStr) return { date: new Date(), dateString: new Date().toISOString().split('T')[0] };
   
   // Remove timezone info if present (e.g., [-03:EST])
   const cleanDate = dateStr.replace(/\[.*\]/, '').trim();
@@ -44,6 +45,9 @@ function parseOFXDate(dateStr: string): Date {
   const month = parseInt(cleanDate.substring(4, 6), 10) - 1; // JS months are 0-indexed
   const day = parseInt(cleanDate.substring(6, 8), 10);
   
+  // Build timezone-safe date string directly from OFX digits
+  const dateString = `${cleanDate.substring(0, 4)}-${cleanDate.substring(4, 6)}-${cleanDate.substring(6, 8)}`;
+  
   let hours = 0, minutes = 0, seconds = 0;
   if (cleanDate.length >= 14) {
     hours = parseInt(cleanDate.substring(8, 10), 10);
@@ -51,7 +55,7 @@ function parseOFXDate(dateStr: string): Date {
     seconds = parseInt(cleanDate.substring(12, 14), 10);
   }
   
-  return new Date(year, month, day, hours, minutes, seconds);
+  return { date: new Date(year, month, day, hours, minutes, seconds), dateString };
 }
 
 /**
@@ -101,10 +105,12 @@ function extractTransactions(content: string): OFXTransaction[] {
     
     const amount = parseFloat(trnamt.replace(',', '.'));
     const description = memo || name || trntype || 'Sem descrição';
+    const parsed = parseOFXDate(dtposted || '');
     
     transactions.push({
       id: fitid,
-      date: parseOFXDate(dtposted || ''),
+      date: parsed.date,
+      dateString: parsed.dateString,
       amount: Math.abs(amount),
       type: amount >= 0 ? 'credit' : 'debit',
       description: description.trim(),
@@ -145,7 +151,7 @@ function extractBalance(content: string): { balance?: number; balanceDate?: Date
   
   return {
     balance: ledgerBal ? parseFloat(ledgerBal.replace(',', '.')) : undefined,
-    balanceDate: balDate ? parseOFXDate(balDate) : undefined,
+    balanceDate: balDate ? parseOFXDate(balDate).date : undefined,
   };
 }
 
@@ -157,8 +163,8 @@ function extractDateRange(content: string): { startDate?: Date; endDate?: Date }
   const dtend = extractTag(content, 'DTEND');
   
   return {
-    startDate: dtstart ? parseOFXDate(dtstart) : undefined,
-    endDate: dtend ? parseOFXDate(dtend) : undefined,
+    startDate: dtstart ? parseOFXDate(dtstart).date : undefined,
+    endDate: dtend ? parseOFXDate(dtend).date : undefined,
   };
 }
 
