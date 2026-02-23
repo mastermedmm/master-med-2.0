@@ -673,6 +673,7 @@ export default function AllocationList() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        {/* 1. Notas Filtradas */}
         <Card className="stat-card">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
@@ -691,6 +692,41 @@ export default function AllocationList() {
             </div>
           </CardContent>
         </Card>
+        {/* 2. Notas Canceladas */}
+        <Card className="stat-card">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Notas Canceladas</p>
+                <p className="text-2xl font-bold text-destructive">{stats.cancelled}</p>
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  {formatCurrency(stats.cancelledGrossValue)}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
+                <Ban className="h-5 w-5 text-destructive" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {/* 3. Notas Válidas */}
+        <Card className="stat-card">
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Notas Válidas</p>
+                <p className="text-2xl font-bold text-success">{stats.validCount}</p>
+                <p className="text-[10px] font-medium text-muted-foreground">
+                  {formatCurrency(stats.validGrossValue)}
+                </p>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-success" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {/* 4. Notas Rateadas */}
         <Card className="stat-card">
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
@@ -704,31 +740,7 @@ export default function AllocationList() {
             </div>
           </CardContent>
         </Card>
-        <Card 
-          className={cn(
-            "stat-card cursor-pointer transition-all hover:shadow-md",
-            filters.statusFilter === 'pending_receipt' && "ring-2 ring-destructive"
-          )}
-          onClick={() => handleCardClick('pending_receipt')}
-        >
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Notas Pendentes</p>
-                <p className="text-2xl font-bold text-destructive">{stats.pendingReceipt}</p>
-                <p className="text-[10px] text-muted-foreground">Sem recebimento total</p>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
-            </div>
-            {filters.statusFilter === 'pending_receipt' && (
-              <Badge variant="outline" className="mt-2 text-[10px] border-destructive text-destructive">
-                Filtro ativo
-              </Badge>
-            )}
-          </CardContent>
-        </Card>
+        {/* 5. Falta Ratear */}
         <Card 
           className={cn(
             "stat-card cursor-pointer transition-all hover:shadow-md",
@@ -754,36 +766,30 @@ export default function AllocationList() {
             )}
           </CardContent>
         </Card>
-        <Card className="stat-card">
+        {/* 6. Notas Pendentes */}
+        <Card 
+          className={cn(
+            "stat-card cursor-pointer transition-all hover:shadow-md",
+            filters.statusFilter === 'pending_receipt' && "ring-2 ring-destructive"
+          )}
+          onClick={() => handleCardClick('pending_receipt')}
+        >
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-muted-foreground">Notas Canceladas</p>
-                <p className="text-2xl font-bold text-destructive">{stats.cancelled}</p>
-                <p className="text-[10px] font-medium text-muted-foreground">
-                  {formatCurrency(stats.cancelledGrossValue)}
-                </p>
+                <p className="text-xs font-medium text-muted-foreground">Notas Pendentes</p>
+                <p className="text-2xl font-bold text-destructive">{stats.pendingReceipt}</p>
+                <p className="text-[10px] text-muted-foreground">Sem recebimento total</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                <Ban className="h-5 w-5 text-destructive" />
+                <AlertTriangle className="h-5 w-5 text-destructive" />
               </div>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="stat-card">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground">Total Válidas</p>
-                <p className="text-2xl font-bold text-success">{stats.validCount}</p>
-                <p className="text-[10px] font-medium text-muted-foreground">
-                  {formatCurrency(stats.validGrossValue)}
-                </p>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-success" />
-              </div>
-            </div>
+            {filters.statusFilter === 'pending_receipt' && (
+              <Badge variant="outline" className="mt-2 text-[10px] border-destructive text-destructive">
+                Filtro ativo
+              </Badge>
+            )}
           </CardContent>
         </Card>
       </div>
