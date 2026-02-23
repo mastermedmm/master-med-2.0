@@ -46,7 +46,7 @@ interface Invoice {
   cofins_value: number;
   is_iss_retained: boolean;
   expected_receipt_date: string;
-  status: 'pendente' | 'recebido' | 'parcialmente_recebido';
+  status: 'pendente' | 'recebido' | 'parcialmente_recebido' | 'cancelado';
   total_received?: number;
   receipt_date: string | null;
   created_at: string;
@@ -538,14 +538,23 @@ export default function AllocationList() {
         if (payablesError) throw payablesError;
       }
 
+      // Update invoice status to cancelado
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .update({ status: 'cancelado' as any })
+        .eq('id', invoiceToCancel.id)
+        .eq('tenant_id', tenantId);
+
+      if (invoiceError) throw invoiceError;
+
       // Log the cancellation
       await logEvent({
         action: 'UPDATE',
         tableName: 'invoices',
         recordId: invoiceToCancel.id,
         recordLabel: `Cancelamento NF ${invoiceToCancel.invoice_number} - ${invoiceToCancel.company_name}`,
-        oldData: { status: 'active' },
-        newData: { status: 'cancelled', accounts_payable_cancelled: !!(invoiceToCancel._allocations_count && invoiceToCancel._allocations_count > 0) },
+        oldData: { status: invoiceToCancel.status },
+        newData: { status: 'cancelado', accounts_payable_cancelled: !!(invoiceToCancel._allocations_count && invoiceToCancel._allocations_count > 0) },
       });
 
       toast({
@@ -922,7 +931,7 @@ export default function AllocationList() {
               </TableHeader>
               <TableBody>
                 {paginatedData.map((invoice) => (
-                  <TableRow key={invoice.id} className="text-xs">
+                  <TableRow key={invoice.id} className={cn("text-xs", invoice.status === 'cancelado' && "bg-destructive/10 hover:bg-destructive/15")}>
                     <TableCell className="py-1.5 px-2 max-w-[100px] truncate" title={invoice.company_name}>
                       {invoice.company_name}
                     </TableCell>
@@ -948,7 +957,11 @@ export default function AllocationList() {
                       )}
                     </TableCell>
                     <TableCell className="py-1.5 px-2">
-                      {invoice.status === 'recebido' ? (
+                      {invoice.status === 'cancelado' ? (
+                        <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
+                          Cancelada
+                        </Badge>
+                      ) : invoice.status === 'recebido' ? (
                         <div className="flex items-center gap-0.5">
                           <CheckCircle className="h-3 w-3 text-success" />
                           <span className="text-[10px] text-success font-medium">
