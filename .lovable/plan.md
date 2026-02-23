@@ -1,26 +1,28 @@
 
+## Correção: Linha extra no rateio travando o salvamento
 
-# Trocar HashRouter por BrowserRouter
+### Problema
+Quando o rateio ja esta completo (total bate com o bruto), o usuario ainda consegue ter adicionado uma linha extra antes do botao desabilitar. Essa linha vazia (valor 0,00, sem medico) faz a validacao falhar e o botao "Salvar" fica desabilitado sem explicacao clara.
 
-## Problema
-O app usa `HashRouter`, fazendo com que a URL real (`/portal-medico/login`) seja ignorada pelo React Router. Ele so le o que vem depois do `#`. Resultado: ao acessar `portal-medico/login`, o sistema mostra a tela de login administrativa ao inves do portal do medico.
+### Solucao
+Duas mudancas complementares:
 
-## Solucao
-Trocar de `HashRouter` para `BrowserRouter` no `App.tsx`. O `vercel.json` ja esta configurado com rewrite para SPA, entao todas as rotas vao funcionar normalmente.
+1. **Impedir adicao quando total ja bateu** (ja implementado na ultima edicao) - manter o `disabled` no botao "Adicionar".
 
-## Mudanca
+2. **Permitir remover linhas vazias sem bloquear** - Alterar a funcao `addAllocation` para verificar se ja existe alguma linha vazia/incompleta antes de adicionar outra. Se o usuario clicar "Adicionar" e ja tiver uma linha sem medico ou com valor zero, nao adicionar outra.
 
-**Arquivo: `src/App.tsx`**
-- Linha 55: trocar `const Router = HashRouter;` por `const Router = BrowserRouter;`
+3. **Ignorar linhas vazias na validacao** - Filtrar linhas com valor `0,00` e sem medico antes de validar e salvar, para que linhas "fantasma" nao bloqueiem o processo.
 
-## Impacto
-- Todas as rotas passam a usar URLs limpas (sem `#`)
-- `/portal-medico/login` vai carregar corretamente a tela do portal do medico
-- `/auth` vai carregar a tela administrativa
-- URLs antigas com `#` vao parar de funcionar, mas como o sistema ja tem redirects de rotas legadas configurados, isso nao deve ser um problema
-- O `vercel.json` ja suporta esse modo com a regra de rewrite `/(.*) -> /index.html`
+### Detalhes tecnicos
 
-## Detalhes tecnicos
-- A unica alteracao e na linha 55 de `src/App.tsx`
-- Nenhuma outra mudanca necessaria pois todas as rotas, links e navegacoes ja usam paths normais (sem `#`)
+**Arquivo: `src/pages/Allocation.tsx`**
 
+- **`addAllocation`**: Adicionar verificacao - se ja existe linha com `doctorId` vazio ou `allocatedNetValue` igual a `'0,00'`, nao adicionar nova linha.
+
+- **`isValid`**: Filtrar allocations que tenham `doctorId` vazio E `allocatedNetValue === '0,00'` (linhas completamente vazias) antes da validacao. Ou seja, linhas vazias sao ignoradas, mas linhas parcialmente preenchidas ainda sao validadas.
+
+- **`handleSave`**: Filtrar as allocations vazias antes de salvar, enviando apenas as preenchidas.
+
+- **Botao "Adicionar"**: Manter a condicao `disabled` existente e adicionar a condicao de linha vazia pendente.
+
+Isso garante que o usuario nunca fique "travado" por causa de uma linha extra acidental.
