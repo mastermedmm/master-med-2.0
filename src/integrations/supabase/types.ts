@@ -1838,7 +1838,11 @@ export type Database = {
         | "pago"
         | "cancelado"
         | "parcialmente_pago"
-      receipt_status: "pendente" | "recebido" | "parcialmente_recebido"
+      receipt_status:
+        | "pendente"
+        | "recebido"
+        | "parcialmente_recebido"
+        | "cancelado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1974,7 +1978,12 @@ export const Constants = {
         "cancelado",
         "parcialmente_pago",
       ],
-      receipt_status: ["pendente", "recebido", "parcialmente_recebido"],
+      receipt_status: [
+        "pendente",
+        "recebido",
+        "parcialmente_recebido",
+        "cancelado",
+      ],
     },
   },
 } as const
