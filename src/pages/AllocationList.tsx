@@ -149,6 +149,11 @@ export default function AllocationList() {
   const [invoiceToCancel, setInvoiceToCancel] = useState<Invoice | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
+  // Revert cancellation dialog state
+  const [revertDialogOpen, setRevertDialogOpen] = useState(false);
+  const [invoiceToRevert, setInvoiceToRevert] = useState<Invoice | null>(null);
+  const [isReverting, setIsReverting] = useState(false);
+
   // Filter logic
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
@@ -648,6 +653,73 @@ export default function AllocationList() {
     }
   };
 
+  // Revert cancellation handlers
+  const handleOpenRevertDialog = (invoice: Invoice) => {
+    setInvoiceToRevert(invoice);
+    setRevertDialogOpen(true);
+  };
+
+  const handleCloseRevertDialog = () => {
+    setRevertDialogOpen(false);
+    setInvoiceToRevert(null);
+  };
+
+  const handleConfirmRevert = async () => {
+    if (!invoiceToRevert || !tenantId) return;
+
+    setIsReverting(true);
+
+    try {
+      // Revert accounts_payable status back to 'pendente' if invoice has allocations
+      if (invoiceToRevert._allocations_count && invoiceToRevert._allocations_count > 0) {
+        const { error: payablesError } = await supabase
+          .from('accounts_payable')
+          .update({ status: 'pendente' as any })
+          .eq('invoice_id', invoiceToRevert.id)
+          .eq('tenant_id', tenantId)
+          .eq('status', 'cancelado' as any);
+
+        if (payablesError) throw payablesError;
+      }
+
+      // Revert invoice status back to 'pendente'
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .update({ status: 'pendente' as any })
+        .eq('id', invoiceToRevert.id)
+        .eq('tenant_id', tenantId);
+
+      if (invoiceError) throw invoiceError;
+
+      // Log the revert
+      await logEvent({
+        action: 'UPDATE',
+        tableName: 'invoices',
+        recordId: invoiceToRevert.id,
+        recordLabel: `Reversão cancelamento NF ${invoiceToRevert.invoice_number} - ${invoiceToRevert.company_name}`,
+        oldData: { status: 'cancelado' },
+        newData: { status: 'pendente', accounts_payable_reverted: !!(invoiceToRevert._allocations_count && invoiceToRevert._allocations_count > 0) },
+      });
+
+      toast({
+        title: 'Cancelamento revertido!',
+        description: `A nota ${invoiceToRevert.invoice_number} foi reativada${invoiceToRevert._allocations_count && invoiceToRevert._allocations_count > 0 ? ' e os lançamentos foram reativados' : ''}.`,
+      });
+
+      handleCloseRevertDialog();
+      loadInvoices();
+    } catch (error: any) {
+      console.error('Error reverting cancellation:', error);
+      toast({
+        title: 'Erro ao reverter',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsReverting(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="page-header flex items-center justify-between">
@@ -1121,13 +1193,24 @@ export default function AllocationList() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Excluir Nota
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleOpenCancelDialog(invoice)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Ban className="h-4 w-4 mr-2" />
-                            Cancelar NF
-                          </DropdownMenuItem>
+                          {invoice.status !== 'cancelado' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleOpenCancelDialog(invoice)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Ban className="h-4 w-4 mr-2" />
+                              Cancelar NF
+                            </DropdownMenuItem>
+                          )}
+                          {invoice.status === 'cancelado' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleOpenRevertDialog(invoice)}
+                              className="text-success focus:text-success"
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Reverter Cancelamento
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -1372,6 +1455,58 @@ export default function AllocationList() {
                   <>
                     <Ban className="h-4 w-4 mr-2" />
                     Confirmar Cancelamento
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revert Cancellation Dialog */}
+      <Dialog open={revertDialogOpen} onOpenChange={handleCloseRevertDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reverter Cancelamento</DialogTitle>
+            <DialogDescription>
+              {invoiceToRevert && (
+                <>Nota {invoiceToRevert.invoice_number} - {invoiceToRevert.company_name}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
+              <RotateCcw className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Confirmar reversão do cancelamento?</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Esta ação irá reativar a nota fiscal
+                  {invoiceToRevert?._allocations_count && invoiceToRevert._allocations_count > 0 ? (
+                    <> e <strong>todos os lançamentos (contas a pagar)</strong> vinculados ao rateio desta nota serão reativados com status "pendente"</>
+                  ) : (
+                    <> (sem rateio vinculado)</>
+                  )}.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseRevertDialog}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleConfirmRevert}
+                disabled={isReverting}
+              >
+                {isReverting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Revertendo...
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Confirmar Reversão
                   </>
                 )}
               </Button>
