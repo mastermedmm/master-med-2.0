@@ -61,6 +61,7 @@ export default function NfseNotasEmitidas() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [issuerFilter, setIssuerFilter] = useState('');
   const [issuers, setIssuers] = useState<{ id: string; name: string }[]>([]);
+  const [reprocessingId, setReprocessingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tenant?.id) return;
