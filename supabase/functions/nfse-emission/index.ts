@@ -1,15 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as asn1js from "npm:asn1js@3.0.5";
-import * as pkijs from "npm:pkijs@3.2.4";
 import forge from "npm:node-forge@1.3.1";
-
-// Set up pkijs crypto engine with Deno's Web Crypto
-const cryptoEngine = new pkijs.CryptoEngine({
-  name: "Deno",
-  crypto: globalThis.crypto,
-  subtle: globalThis.crypto.subtle,
-});
-pkijs.setEngine("Deno", cryptoEngine);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,152 +25,61 @@ interface CertificateData {
   notAfter: Date;
 }
 
-// ==================== PFX Parsing with pkijs (supports AES) ====================
+// ==================== PFX Parsing with node-forge ====================
 
-function passwordToUint8Array(password: string): Uint8Array {
-  // PKCS#12 uses UTF-16BE encoding for passwords
-  const passwordBuf = new ArrayBuffer((password.length + 1) * 2);
-  const passwordView = new DataView(passwordBuf);
-  for (let i = 0; i < password.length; i++) {
-    passwordView.setUint16(i * 2, password.charCodeAt(i), false);
-  }
-  passwordView.setUint16(password.length * 2, 0, false); // null terminator
-  return new Uint8Array(passwordBuf);
-}
+async function parsePfxCertificate(pfxBase64: string, password: string): Promise<CertificateData> {
+  console.log(`[nfse-emission] Parsing PFX (base64 len: ${pfxBase64.length}, pwd len: ${password.length})`);
 
-async function parsePfxWithPkijs(pfxBase64: string, password: string): Promise<CertificateData> {
-  console.log(`[nfse-emission] Parsing PFX with pkijs (base64 len: ${pfxBase64.length})`);
-  
-  const pfxBytes = Uint8Array.from(atob(pfxBase64), c => c.charCodeAt(0));
-  const asn1 = asn1js.fromBER(pfxBytes.buffer);
-  if (asn1.offset === -1) throw new Error("Formato PFX/P12 inválido");
-
-  const pfx = new pkijs.PFX({ schema: asn1.result });
-  const passwordBytes = passwordToUint8Array(password);
-
-  // Make MAC and decrypt
-  await pfx.parseInternalValues({
-    password: passwordBytes,
-    checkIntegrity: true,
-  });
-
-  let privateKey: CryptoKey | null = null;
-  let certificate: pkijs.Certificate | null = null;
-
-  const authSafe = pfx.parsedValue?.authenticatedSafe;
-  if (!authSafe) throw new Error("PFX não contém authenticatedSafe");
-
-  await authSafe.parseInternalValues({
-    password: passwordBytes,
-  });
-
-  const safeContents = authSafe.parsedValue?.safeContents;
-  if (!safeContents) throw new Error("PFX não contém safeContents");
-
-  for (const safeContent of safeContents) {
-    // Parse each safe content with password
-    try {
-      await safeContent.value?.parseInternalValues?.({
-        password: passwordBytes,
-      });
-    } catch {
-      // Some contents may not need password
-    }
-
-    const safeBags = safeContent.value?.safeBags;
-    if (!safeBags) continue;
-
-    for (const safeBag of safeBags) {
-      // PKCS8ShroudedKeyBag OID: 1.2.840.113549.1.12.10.1.2
-      if (safeBag.bagId === "1.2.840.113549.1.12.10.1.2") {
-        console.log("[nfse-emission] Found PKCS8ShroudedKeyBag");
-        const keyBag = safeBag.bagValue;
-        const decryptedKey = await keyBag.makeInternalValues({
-          password: passwordBytes,
-        });
-        // Import decrypted PKCS8 key
-        const pkcs8Bytes = keyBag.parsedKey
-          ? await crypto.subtle.exportKey("pkcs8", keyBag.parsedKey)
-          : decryptedKey;
-
-        if (keyBag.parsedKey) {
-          privateKey = keyBag.parsedKey;
-        } else {
-          // Try importing as PKCS8
-          privateKey = await crypto.subtle.importKey(
-            "pkcs8",
-            new Uint8Array(pkcs8Bytes),
-            { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-            true,
-            ["sign"]
-          );
-        }
-      }
-      // CertBag OID: 1.2.840.113549.1.12.10.1.3
-      if (safeBag.bagId === "1.2.840.113549.1.12.10.1.3") {
-        const certBag = safeBag.bagValue;
-        if (certBag.parsedValue instanceof pkijs.Certificate) {
-          // Prefer the first certificate (usually the end-entity cert)
-          if (!certificate) {
-            certificate = certBag.parsedValue;
-            console.log("[nfse-emission] Found Certificate");
-          }
-        }
-      }
-    }
-  }
-
-  if (!privateKey) throw new Error("Chave privada não encontrada no PFX");
-  if (!certificate) throw new Error("Certificado não encontrado no PFX");
-
-  // Export key to PEM
-  const keyDer = await crypto.subtle.exportKey("pkcs8", privateKey);
-  const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(keyDer)));
-  const privateKeyPem = `-----BEGIN PRIVATE KEY-----\n${keyBase64.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----`;
-
-  // Export cert to PEM
-  const certDer = certificate.toSchema().toBER(false);
-  const certBase64 = btoa(String.fromCharCode(...new Uint8Array(certDer)));
-  const certificatePem = `-----BEGIN CERTIFICATE-----\n${certBase64.match(/.{1,64}/g)?.join("\n")}\n-----END CERTIFICATE-----`;
-
-  // Certificate info
-  const notAfter = certificate.notAfter.value;
-  const formatRDN = (rdn: pkijs.RelativeDistinguishedNames) =>
-    rdn.typesAndValues.map(tv => {
-      const val = tv.value?.valueBlock?.value || tv.value?.valueBlock?.valueDec || "?";
-      return `${tv.type}=${val}`;
-    }).join(", ");
-
-  console.log(`[nfse-emission] pkijs: cert parsed, valid until ${notAfter.toISOString()}`);
-
-  return {
-    privateKeyPem,
-    certificatePem,
-    certificateDer: new Uint8Array(certDer),
-    privateKeyCrypto: privateKey,
-    serialNumber: certificate.serialNumber.valueBlock.toString(),
-    issuerDN: formatRDN(certificate.issuer),
-    subjectDN: formatRDN(certificate.subject),
-    notAfter,
-  };
-}
-
-// ==================== Fallback: node-forge PFX parsing ====================
-
-async function parsePfxWithForge(pfxBase64: string, password: string): Promise<CertificateData> {
-  console.log("[nfse-emission] Fallback: trying node-forge");
   const pfxDer = forge.util.decode64(pfxBase64);
   const pfxAsn1 = forge.asn1.fromDer(pfxDer);
-  const p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, password);
+
+  // Try multiple parsing strategies
+  let p12: forge.pkcs12.Pkcs12Pfx | null = null;
+  const errors: string[] = [];
+
+  // Strategy 1: standard password
+  try {
+    p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, password);
+    console.log("[nfse-emission] Strategy 1 (standard) OK");
+  } catch (e1) {
+    errors.push(`standard: ${(e1 as Error).message}`);
+    // Strategy 2: non-strict mode
+    try {
+      p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, password);
+      console.log("[nfse-emission] Strategy 2 (non-strict) OK");
+    } catch (e2) {
+      errors.push(`non-strict: ${(e2 as Error).message}`);
+      // Strategy 3: trimmed password
+      try {
+        p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, password.trim());
+        console.log("[nfse-emission] Strategy 3 (trimmed) OK");
+      } catch (e3) {
+        errors.push(`trimmed: ${(e3 as Error).message}`);
+        // Strategy 4: empty password (some test certs)
+        try {
+          p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, "");
+          console.log("[nfse-emission] Strategy 4 (empty) OK");
+        } catch (e4) {
+          errors.push(`empty: ${(e4 as Error).message}`);
+        }
+      }
+    }
+  }
+
+  if (!p12) {
+    throw new Error(
+      `Não foi possível abrir o certificado PFX. Verifique se a senha está correta e se o certificado não usa criptografia AES (apenas 3DES é suportado). Tentativas: ${errors.join("; ")}`
+    );
+  }
 
   const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
   const keyBag = keyBags[forge.pki.oids.pkcs8ShroudedKeyBag];
-  if (!keyBag?.length || !keyBag[0].key) throw new Error("Chave privada não encontrada");
+  if (!keyBag?.length || !keyBag[0].key) throw new Error("Chave privada não encontrada no PFX");
   const forgePrivateKey = keyBag[0].key as forge.pki.rsa.PrivateKey;
 
   const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
   const certBag = certBags[forge.pki.oids.certBag];
-  if (!certBag?.length || !certBag[0].cert) throw new Error("Certificado não encontrado");
+  if (!certBag?.length || !certBag[0].cert) throw new Error("Certificado não encontrado no PFX");
   const cert = certBag[0].cert;
 
   const privateKeyPem = forge.pki.privateKeyToPem(forgePrivateKey);
@@ -210,6 +109,8 @@ async function parsePfxWithForge(pfxBase64: string, password: string): Promise<C
   const formatDN = (attrs: forge.pki.CertificateField[]) =>
     attrs.map(a => `${a.shortName}=${a.value}`).join(", ");
 
+  console.log(`[nfse-emission] Cert OK: ${formatDN(cert.subject.attributes)}, válido até ${cert.validity.notAfter.toISOString()}`);
+
   return {
     privateKeyPem,
     certificatePem,
@@ -220,28 +121,6 @@ async function parsePfxWithForge(pfxBase64: string, password: string): Promise<C
     subjectDN: formatDN(cert.subject.attributes),
     notAfter: cert.validity.notAfter,
   };
-}
-
-// ==================== Combined PFX parser ====================
-
-async function parsePfxCertificate(pfxBase64: string, password: string): Promise<CertificateData> {
-  // Try pkijs first (supports modern AES-encrypted PFX from Brazilian CAs)
-  try {
-    return await parsePfxWithPkijs(pfxBase64, password);
-  } catch (pkijsError) {
-    console.warn("[nfse-emission] pkijs failed:", (pkijsError as Error).message);
-  }
-
-  // Fallback to node-forge (supports older 3DES/RC2 PFX)
-  try {
-    return await parsePfxWithForge(pfxBase64, password);
-  } catch (forgeError) {
-    console.error("[nfse-emission] node-forge also failed:", (forgeError as Error).message);
-    throw new Error(
-      `Não foi possível abrir o certificado PFX. Verifique se a senha está correta. ` +
-      `Detalhes: pkijs: ${(pkijsError as any)?.message || "?"}, forge: ${(forgeError as Error).message}`
-    );
-  }
 }
 
 // ==================== XML Canonicalization (C14N) ====================
