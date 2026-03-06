@@ -258,9 +258,12 @@ export default function NfseNotasEmitidas() {
                     <TableHead className="text-right">Valor Líquido</TableHead>
                     <TableHead>Data Emissão</TableHead>
                     <TableHead className="w-[100px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {paginatedNotas.map(nota => {
                     const st = STATUS_MAP[nota.status] || { label: nota.status, variant: 'outline' as const };
+                    const canReprocess = ['fila_emissao', 'rejeitado'].includes(nota.status);
                     return (
                       <TableRow key={nota.id}>
                         <TableCell>
@@ -287,6 +290,22 @@ export default function NfseNotasEmitidas() {
                         <TableCell className="text-right text-sm">{fmtCurrency(nota.valor_liquido)}</TableCell>
                         <TableCell className="text-sm">
                           {nota.data_emissao ? format(new Date(nota.data_emissao + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {canReprocess && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReprocess(nota.id)}
+                              disabled={reprocessingId === nota.id}
+                            >
+                              {reprocessingId === nota.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RotateCw className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
