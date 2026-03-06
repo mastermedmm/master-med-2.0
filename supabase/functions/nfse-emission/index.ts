@@ -517,6 +517,24 @@ Deno.serve(async (req: Request) => {
         usuario_id: userId,
         codigo_retorno: apiResponse.protocolo,
       });
+
+      // Registrar no audit_logs
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", userId)
+        .single();
+
+      await supabase.from("audit_logs").insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        user_name: profileData?.full_name || "Sistema",
+        action: "NFSE_EMISSAO",
+        table_name: "notas_fiscais",
+        record_id: nota_fiscal_id,
+        record_label: `Protocolo: ${apiResponse.protocolo}`,
+        new_data: { protocolo: apiResponse.protocolo, chave_acesso: apiResponse.chaveAcesso, status: "autorizado" },
+      });
     } else {
       await supabase
         .from("notas_fiscais")
@@ -534,6 +552,24 @@ Deno.serve(async (req: Request) => {
         usuario_id: userId,
         codigo_retorno: apiResponse.status,
         mensagem: apiResponse.motivo,
+      });
+
+      // Registrar rejeição no audit_logs
+      const { data: profileData2 } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("user_id", userId)
+        .single();
+
+      await supabase.from("audit_logs").insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        user_name: profileData2?.full_name || "Sistema",
+        action: "NFSE_REJEICAO",
+        table_name: "notas_fiscais",
+        record_id: nota_fiscal_id,
+        record_label: apiResponse.motivo || "Rejeitada",
+        new_data: { motivo: apiResponse.motivo, status: "rejeitado" },
       });
     }
 

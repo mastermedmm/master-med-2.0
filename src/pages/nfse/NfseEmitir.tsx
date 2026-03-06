@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAuditLog } from '@/hooks/useAuditLog';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
@@ -132,6 +133,7 @@ export default function NfseEmitir() {
   const { toast } = useToast();
   const { tenant } = useTenant();
   const { user } = useAuth();
+  const { logEvent } = useAuditLog();
   const navigate = useNavigate();
   const { canCreate } = usePermissions();
 
@@ -241,6 +243,14 @@ export default function NfseEmitir() {
     if (error) {
       toast({ title: 'Erro ao salvar rascunho', description: error.message, variant: 'destructive' });
     } else {
+      const noteId = savedId || '';
+      logEvent({
+        action: 'NFSE_CRIACAO',
+        tableName: 'notas_fiscais',
+        recordId: noteId,
+        recordLabel: `DPS ${form.descricao_servico?.substring(0, 50) || ''}`,
+        newData: payload,
+      });
       toast({ title: 'Rascunho salvo com sucesso' });
     }
     setSaving(false);
@@ -280,11 +290,25 @@ export default function NfseEmitir() {
       }
 
       if (result?.success) {
+        logEvent({
+          action: 'NFSE_EMISSAO',
+          tableName: 'notas_fiscais',
+          recordId: savedId,
+          recordLabel: `Protocolo: ${result.protocolo}`,
+          newData: { protocolo: result.protocolo, status: 'enviado' },
+        });
         toast({
           title: 'NFS-e emitida com sucesso',
           description: `Protocolo: ${result.protocolo}`,
         });
       } else {
+        logEvent({
+          action: 'NFSE_REJEICAO',
+          tableName: 'notas_fiscais',
+          recordId: savedId,
+          recordLabel: result?.motivo || 'Rejeitada',
+          newData: { motivo: result?.motivo, status: 'rejeitado' },
+        });
         toast({
           title: 'Nota rejeitada',
           description: result?.motivo || 'Erro na emissão da nota',
