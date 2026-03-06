@@ -133,6 +133,7 @@ export default function NfseEmitir() {
   const { toast } = useToast();
   const { tenant } = useTenant();
   const { user } = useAuth();
+  const { logEvent } = useAuditLog();
   const navigate = useNavigate();
   const { canCreate } = usePermissions();
 

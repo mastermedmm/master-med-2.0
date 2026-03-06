@@ -89,6 +89,7 @@ export default function NfseDocumentos() {
   const { toast } = useToast();
   const { tenant } = useTenant();
   const { canRead } = usePermissions();
+  const { logEvent } = useAuditLog();
 
   const [documentos, setDocumentos] = useState<DocumentoNfse[]>([]);
   const [loading, setLoading] = useState(true);
