@@ -261,41 +261,40 @@ export default function NfseEmitir() {
     setEmitting(true);
     setConfirmEmitOpen(false);
 
-    // 1. Create DPS record
-    const { error: dpsError } = await supabase.from('dps_enviadas').insert({
-      tenant_id: tenant!.id,
-      nota_fiscal_id: savedId,
-      status: 'pendente',
-    });
+    try {
+      // Atualizar status para fila_emissao antes de chamar o backend
+      await supabase
+        .from('notas_fiscais')
+        .update({ status: 'fila_emissao' })
+        .eq('id', savedId);
 
-    if (dpsError) {
-      toast({ title: 'Erro ao gerar DPS', description: dpsError.message, variant: 'destructive' });
-      setEmitting(false);
-      return;
+      // Chamar edge function de emissão
+      const { data: result, error: fnError } = await supabase.functions.invoke('nfse-emission', {
+        body: { nota_fiscal_id: savedId },
+      });
+
+      if (fnError) {
+        toast({ title: 'Erro ao emitir nota', description: fnError.message, variant: 'destructive' });
+        setEmitting(false);
+        return;
+      }
+
+      if (result?.success) {
+        toast({
+          title: 'NFS-e emitida com sucesso',
+          description: `Protocolo: ${result.protocolo}`,
+        });
+      } else {
+        toast({
+          title: 'Nota rejeitada',
+          description: result?.motivo || 'Erro na emissão da nota',
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      toast({ title: 'Erro ao emitir nota', description: 'Erro inesperado ao processar emissão', variant: 'destructive' });
     }
 
-    // 2. Update nota status to fila_emissao
-    const { error: updateError } = await supabase
-      .from('notas_fiscais')
-      .update({ status: 'fila_emissao' })
-      .eq('id', savedId);
-
-    if (updateError) {
-      toast({ title: 'Erro ao atualizar status', description: updateError.message, variant: 'destructive' });
-      setEmitting(false);
-      return;
-    }
-
-    // 3. Create evento
-    await supabase.from('eventos_nfse').insert({
-      tenant_id: tenant!.id,
-      nota_fiscal_id: savedId,
-      tipo: 'envio_dps',
-      descricao: 'Nota enviada para fila de emissão',
-      usuario_id: user?.id,
-    });
-
-    toast({ title: 'Nota enviada para emissão', description: 'A nota foi colocada na fila de emissão.' });
     setEmitting(false);
     navigate(ROUTES.nfse.notasEmitidas);
   };

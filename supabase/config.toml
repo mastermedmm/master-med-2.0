@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.licensee-portal-data]
 verify_jwt = false
+
+[functions.nfse-emission]
+verify_jwt = false
+
+[functions.nfse-consulta]
+verify_jwt = false
+
+[functions.nfse-eventos]
+verify_jwt = false
