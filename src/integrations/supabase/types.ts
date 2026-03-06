@@ -300,6 +300,7 @@ export type Database = {
           endpoint_api: string | null
           id: string
           inscricao_municipal: string | null
+          issuer_id: string | null
           municipio_codigo: string | null
           municipio_nome: string | null
           municipio_uf: string | null
@@ -319,6 +320,7 @@ export type Database = {
           endpoint_api?: string | null
           id?: string
           inscricao_municipal?: string | null
+          issuer_id?: string | null
           municipio_codigo?: string | null
           municipio_nome?: string | null
           municipio_uf?: string | null
@@ -338,6 +340,7 @@ export type Database = {
           endpoint_api?: string | null
           id?: string
           inscricao_municipal?: string | null
+          issuer_id?: string | null
           municipio_codigo?: string | null
           municipio_nome?: string | null
           municipio_uf?: string | null
@@ -349,9 +352,16 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "configuracoes_nfse_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "configuracoes_nfse_tenant_id_fkey"
             columns: ["tenant_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
