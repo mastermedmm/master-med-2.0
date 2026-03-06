@@ -362,7 +362,9 @@ async function decryptPBEData(
       const ok = cipher.finish();
       log.log(`RC2 cipher.finish() returned: ${ok}`);
       const result = forgeStringToBytes(cipher.output.getBytes());
-      log.log(`RC2 decrypted: ${result.length} bytes`);
+      const rawResult = forgeStringToBytes(cipher.output.getBytes());
+      const result = removePkcs7Padding(rawResult, 8);
+      log.log(`RC2 decrypted: ${rawResult.length} raw -> ${result.length} after padding removal`);
       return result;
     }
   }
