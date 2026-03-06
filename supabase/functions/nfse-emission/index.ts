@@ -304,7 +304,12 @@ async function decryptPBEData(
     log.log(`Using legacy ${algoName} decryption`);
     const params = (algValues[1] as any).value as forge.asn1.Asn1[];
     const salt = forgeStringToBytes((params[0] as any).value as string);
-    const iterations = forge.asn1.derToInteger(params[1]);
+    // Manual integer parse - forge.asn1.derToInteger is broken in Deno (bytes.length not a function)
+    const iterRaw = (params[1] as any).value as string;
+    let iterations = 0;
+    for (let ii = 0; ii < iterRaw.length; ii++) {
+      iterations = (iterations << 8) | iterRaw.charCodeAt(ii);
+    }
     const pwdBytes = passwordToBMPBytes(password);
     log.log(`${algoName}: iterations=${iterations}, salt=${salt.length}b`);
 
