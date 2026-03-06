@@ -1073,21 +1073,51 @@ Deno.serve(async (req: Request) => {
     }
 
     // 3. Parse PFX certificate
+    _currentDiag = new DiagnosticLogger(); // Reset diagnostic logger for this request
+    const diag = getDiag();
     let certData: CertificateData;
     try {
       certData = await parsePfxCertificate(config.certificado_base64, config.certificado_senha);
-      console.log(`[nfse-emission] Cert OK: ${certData.subjectDN}, até ${certData.notAfter.toISOString()}`);
+      diag.log(`Cert OK: ${certData.subjectDN}, até ${certData.notAfter.toISOString()}`);
 
       if (certData.notAfter < new Date()) {
+        // Persist diagnostic log even on expiry
+        await supabase.from("logs_integracao_nfse").insert({
+          tenant_id: tenantId, nota_fiscal_id, operacao: "parse_certificado",
+          sucesso: false, erro_mensagem: `Certificado expirado em ${certData.notAfter.toISOString().split("T")[0]}`,
+          request_payload: diag.getFullLog().substring(0, 5000),
+        });
         return new Response(JSON.stringify({ error: `Certificado expirado em ${certData.notAfter.toISOString().split("T")[0]}` }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     } catch (certError) {
+      const fullDiagLog = diag.getFullLog();
       console.error("[nfse-emission] Cert error:", certError);
+      console.error("[nfse-emission] Full diagnostic log:\n" + fullDiagLog);
+      
+      // Persist full diagnostic to logs_integracao_nfse for debugging
+      await supabase.from("logs_integracao_nfse").insert({
+        tenant_id: tenantId, nota_fiscal_id, operacao: "parse_certificado",
+        sucesso: false,
+        erro_mensagem: certError instanceof Error ? certError.message : "Erro desconhecido",
+        request_payload: fullDiagLog.substring(0, 5000),
+        response_payload: certError instanceof Error ? (certError.stack || "").substring(0, 5000) : null,
+      });
+      
+      // Also create an evento for visibility in UI
+      await supabase.from("eventos_nfse").insert({
+        tenant_id: tenantId, nota_fiscal_id, tipo: "rejeicao",
+        descricao: `Erro ao ler certificado digital: ${certError instanceof Error ? certError.message.substring(0, 200) : "Erro desconhecido"}`,
+        mensagem: fullDiagLog.substring(0, 2000),
+        usuario_id: userId,
+        codigo_retorno: "CERT_ERROR",
+      });
+      
       return new Response(JSON.stringify({
         error: "Erro ao ler certificado digital. Verifique se o arquivo PFX e a senha estão corretos.",
-        details: certError instanceof Error ? certError.message : "Erro desconhecido",
+        details: certError instanceof Error ? certError.message.substring(0, 500) : "Erro desconhecido",
+        diagnosticLog: fullDiagLog.substring(0, 3000),
       }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
