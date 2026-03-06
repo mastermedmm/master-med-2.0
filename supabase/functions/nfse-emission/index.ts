@@ -1073,10 +1073,11 @@ async function enviarDpsApiNacional(xmlAssinado: string, certData: CertificateDa
   try {
     let response: Response;
     try {
-      // @ts-ignore - Deno mTLS
+      // @ts-ignore - Deno mTLS with HTTP/1.1 (SEFIN requires HTTP/1.1)
       const httpClient = Deno.createHttpClient({
         certChain: certData.certificatePem,
         privateKey: certData.privateKeyPem,
+        http2: false,
       });
       response = await fetch(url, {
         method: "POST",
@@ -1087,10 +1088,18 @@ async function enviarDpsApiNacional(xmlAssinado: string, certData: CertificateDa
       });
     } catch (mtlsError) {
       console.warn("[nfse-emission] mTLS fallback:", mtlsError);
+      // @ts-ignore - Fallback without mTLS but still HTTP/1.1
+      let fallbackClient: any;
+      try {
+        // @ts-ignore
+        fallbackClient = Deno.createHttpClient({ http2: false });
+      } catch { /* ignore */ }
       response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ dpsXmlGZipB64: xmlGzipBase64 }),
+        // @ts-ignore
+        ...(fallbackClient ? { client: fallbackClient } : {}),
       });
     }
 
