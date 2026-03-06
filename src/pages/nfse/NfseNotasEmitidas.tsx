@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, FileCheck, Search, RefreshCw } from 'lucide-react';
+import { Loader2, FileCheck, Search, RefreshCw, RotateCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -61,6 +61,7 @@ export default function NfseNotasEmitidas() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [issuerFilter, setIssuerFilter] = useState('');
   const [issuers, setIssuers] = useState<{ id: string; name: string }[]>([]);
+  const [reprocessingId, setReprocessingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -117,6 +118,34 @@ export default function NfseNotasEmitidas() {
   const paginatedNotas = pagination.paginatedData as unknown as NotaFiscal[];
 
   const fmtCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const handleReprocess = async (notaId: string) => {
+    setReprocessingId(notaId);
+    try {
+      // Update status to fila_emissao
+      await supabase
+        .from('notas_fiscais')
+        .update({ status: 'fila_emissao' as any })
+        .eq('id', notaId);
+
+      // Call emission edge function
+      const { data: result, error: fnError } = await supabase.functions.invoke('nfse-emission', {
+        body: { nota_fiscal_id: notaId },
+      });
+
+      if (fnError) {
+        toast({ title: 'Erro ao reprocessar', description: fnError.message, variant: 'destructive' });
+      } else if (result?.success) {
+        toast({ title: 'NFS-e emitida com sucesso', description: `Protocolo: ${result.protocolo}` });
+      } else {
+        toast({ title: 'Nota rejeitada', description: result?.motivo || 'Erro na emissão', variant: 'destructive' });
+      }
+      loadNotas();
+    } catch (err) {
+      toast({ title: 'Erro ao reprocessar', description: 'Erro inesperado', variant: 'destructive' });
+    }
+    setReprocessingId(null);
+  };
 
   if (!canRead('nfse.emitir')) {
     return (
@@ -228,11 +257,13 @@ export default function NfseNotasEmitidas() {
                     <TableHead className="text-right">ISS</TableHead>
                     <TableHead className="text-right">Valor Líquido</TableHead>
                     <TableHead>Data Emissão</TableHead>
+                    <TableHead className="w-[100px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedNotas.map(nota => {
                     const st = STATUS_MAP[nota.status] || { label: nota.status, variant: 'outline' as const };
+                    const canReprocess = ['fila_emissao', 'rejeitado'].includes(nota.status);
                     return (
                       <TableRow key={nota.id}>
                         <TableCell>
@@ -259,6 +290,22 @@ export default function NfseNotasEmitidas() {
                         <TableCell className="text-right text-sm">{fmtCurrency(nota.valor_liquido)}</TableCell>
                         <TableCell className="text-sm">
                           {nota.data_emissao ? format(new Date(nota.data_emissao + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {canReprocess && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReprocess(nota.id)}
+                              disabled={reprocessingId === nota.id}
+                            >
+                              {reprocessingId === nota.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <RotateCw className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
