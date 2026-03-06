@@ -342,22 +342,25 @@ async function decryptPBEData(
       const key = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 1, 24);
       const iv = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 2, 8);
       
-      const cipher = forge.cipher.createDecipher("3DES-CBC", forge.util.createBuffer(key));
-      cipher.start({ iv: forge.util.createBuffer(iv) });
-      cipher.update(forge.util.createBuffer(encryptedData));
-      cipher.finish();
-      const result = forgeStringToBytes(cipher.output.getBytes());
-      log.log(`3DES decrypted: ${result.length} bytes`);
+      const cipher = forge.cipher.createDecipher("3DES-CBC", forge.util.createBuffer(uint8ToForgeStr(key)));
+      cipher.start({ iv: forge.util.createBuffer(uint8ToForgeStr(iv)) });
+      cipher.update(forge.util.createBuffer(uint8ToForgeStr(encryptedData)));
+      const ok = cipher.finish();
+      log.log(`3DES cipher.finish() returned: ${ok}`);
+      const rawResult = forgeStringToBytes(cipher.output.getBytes());
+      const result = removePkcs7Padding(rawResult, 8);
+      log.log(`3DES decrypted: ${rawResult.length} raw -> ${result.length} after padding removal, first byte: 0x${result[0]?.toString(16)}`);
       return result;
     } else {
       // RC2-40-CBC
       const key = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 1, 5);
       const iv = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 2, 8);
       
-      const cipher = forge.cipher.createDecipher("RC2-CBC" as any, forge.util.createBuffer(key));
-      cipher.start({ iv: forge.util.createBuffer(iv) });
-      cipher.update(forge.util.createBuffer(encryptedData));
-      cipher.finish();
+      const cipher = forge.cipher.createDecipher("RC2-CBC" as any, forge.util.createBuffer(uint8ToForgeStr(key)));
+      cipher.start({ iv: forge.util.createBuffer(uint8ToForgeStr(iv)) });
+      cipher.update(forge.util.createBuffer(uint8ToForgeStr(encryptedData)));
+      const ok = cipher.finish();
+      log.log(`RC2 cipher.finish() returned: ${ok}`);
       const result = forgeStringToBytes(cipher.output.getBytes());
       log.log(`RC2 decrypted: ${result.length} bytes`);
       return result;
