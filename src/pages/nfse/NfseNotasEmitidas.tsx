@@ -119,6 +119,34 @@ export default function NfseNotasEmitidas() {
 
   const fmtCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  const handleReprocess = async (notaId: string) => {
+    setReprocessingId(notaId);
+    try {
+      // Update status to fila_emissao
+      await supabase
+        .from('notas_fiscais')
+        .update({ status: 'fila_emissao' as any })
+        .eq('id', notaId);
+
+      // Call emission edge function
+      const { data: result, error: fnError } = await supabase.functions.invoke('nfse-emission', {
+        body: { nota_fiscal_id: notaId },
+      });
+
+      if (fnError) {
+        toast({ title: 'Erro ao reprocessar', description: fnError.message, variant: 'destructive' });
+      } else if (result?.success) {
+        toast({ title: 'NFS-e emitida com sucesso', description: `Protocolo: ${result.protocolo}` });
+      } else {
+        toast({ title: 'Nota rejeitada', description: result?.motivo || 'Erro na emissão', variant: 'destructive' });
+      }
+      loadNotas();
+    } catch (err) {
+      toast({ title: 'Erro ao reprocessar', description: 'Erro inesperado', variant: 'destructive' });
+    }
+    setReprocessingId(null);
+  };
+
   if (!canRead('nfse.emitir')) {
     return (
       <AppLayout>
