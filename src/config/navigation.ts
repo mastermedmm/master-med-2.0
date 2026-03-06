@@ -21,7 +21,6 @@ import {
   Cloud,
   History,
   Handshake,
-  FileText,
   FilePlus,
   FileCheck,
   AlertTriangle,
