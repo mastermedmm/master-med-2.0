@@ -232,7 +232,7 @@ async function decryptPBES2(
   const kdfParamsValues = (kdfParamsAsn1 as any).value as forge.asn1.Asn1[];
   
   const saltBytes = forgeStringToBytes((kdfParamsValues[0] as any).value as string);
-  const iterations = forge.asn1.derToInteger(kdfParamsValues[1] as any);
+  const iterations = safeAsn1Integer(kdfParamsValues[1]);
   
   // Detect PRF (default SHA-1, may be SHA-256)
   let prfHash = "SHA-1";
@@ -240,7 +240,7 @@ async function decryptPBES2(
   for (let i = 2; i < kdfParamsValues.length; i++) {
     const param = kdfParamsValues[i] as any;
     if (param.type === forge.asn1.Type.INTEGER) {
-      keyLength = forge.asn1.derToInteger(param);
+      keyLength = safeAsn1Integer(param);
       log.log(`KDF explicit keyLength: ${keyLength}`);
     } else if (param.type === forge.asn1.Type.SEQUENCE) {
       const prfOid = safeGetOid((param.value as any[])[0]);
@@ -315,12 +315,7 @@ async function decryptPBEData(
     log.log(`Using legacy ${algoName} decryption`);
     const params = (algValues[1] as any).value as forge.asn1.Asn1[];
     const salt = forgeStringToBytes((params[0] as any).value as string);
-    // Manual integer parse - forge.asn1.derToInteger is broken in Deno (bytes.length not a function)
-    const iterRaw = (params[1] as any).value as string;
-    let iterations = 0;
-    for (let ii = 0; ii < iterRaw.length; ii++) {
-      iterations = (iterations << 8) | iterRaw.charCodeAt(ii);
-    }
+    const iterations = safeAsn1Integer(params[1]);
     const pwdBytes = passwordToBMPBytes(password);
     log.log(`${algoName}: iterations=${iterations}, salt=${salt.length}b`);
 
@@ -378,9 +373,8 @@ async function parsePfxCertificate(pfxBase64: string, password: string): Promise
     const pfxSeq = (pfxAsn1 as any).value as forge.asn1.Asn1[];
     if (pfxSeq[0]) {
       try {
-        const vRaw = (pfxSeq[0] as any).value as string;
-        let version = 0;
-        for (let vi = 0; vi < vRaw.length; vi++) version = (version << 8) | vRaw.charCodeAt(vi);
+        const version = safeAsn1Integer(pfxSeq[0]);
+        diag.log(`PFX version: ${version}`);
         diag.log(`PFX version: ${version}`);
       } catch {}
     }
