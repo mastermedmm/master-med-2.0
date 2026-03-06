@@ -199,20 +199,25 @@ function describeAsn1Node(node: any, depth = 0): string {
 async function decryptPBES2(
   encryptedData: Uint8Array,
   algorithmAsn1: forge.asn1.Asn1,
-  password: string
+  password: string,
+  diag?: DiagnosticLogger
 ): Promise<Uint8Array> {
+  const log = diag || new DiagnosticLogger();
+  
   // Parse PBES2 params
   const params = algorithmAsn1.value as forge.asn1.Asn1[];
   const kdfAsn1 = params[0]; // keyDerivationFunc
   const encSchemeAsn1 = params[1]; // encryptionScheme
 
+  log.log(`PBES2 structure: kdf=${describeAsn1Node(kdfAsn1, 0).substring(0, 200)}`);
+  log.log(`PBES2 structure: encScheme=${describeAsn1Node(encSchemeAsn1, 0).substring(0, 200)}`);
+
   // Parse KDF (PBKDF2)
-  const kdfParams = (kdfAsn1 as any).value as forge.asn1.Asn1[];
-  const salt = forgeStringToBytes(forge.asn1.derToOid(kdfParams[0] as any) ? "" : ((kdfParams[0] as any).value as string));
+  const kdfValues = (kdfAsn1 as any).value as forge.asn1.Asn1[];
+  const kdfOid = safeGetOid(kdfValues[0]);
+  log.log(`KDF OID: ${kdfOid}`);
   
-  // Actually re-parse properly
-  const kdfOidAsn1 = (kdfAsn1 as any).value[0];
-  const kdfParamsAsn1 = (kdfAsn1 as any).value[1];
+  const kdfParamsAsn1 = kdfValues[1];
   const kdfParamsValues = (kdfParamsAsn1 as any).value as forge.asn1.Asn1[];
   
   const saltBytes = forgeStringToBytes((kdfParamsValues[0] as any).value as string);
@@ -225,19 +230,23 @@ async function decryptPBES2(
     const param = kdfParamsValues[i] as any;
     if (param.type === forge.asn1.Type.INTEGER) {
       keyLength = forge.asn1.derToInteger(param);
+      log.log(`KDF explicit keyLength: ${keyLength}`);
     } else if (param.type === forge.asn1.Type.SEQUENCE) {
-      const prfOid = forge.asn1.derToOid((param.value as any[])[0]);
+      const prfOid = safeGetOid((param.value as any[])[0]);
+      log.log(`PRF OID: ${prfOid}`);
       if (prfOid === "1.2.840.113549.2.9") prfHash = "SHA-256";
       else if (prfOid === "1.2.840.113549.2.7") prfHash = "SHA-1";
       else if (prfOid === "1.2.840.113549.2.10") prfHash = "SHA-384";
       else if (prfOid === "1.2.840.113549.2.11") prfHash = "SHA-512";
+      else log.warn(`Unknown PRF OID: ${prfOid}`);
     }
   }
 
   // Parse encryption scheme
   const encSchemeValues = (encSchemeAsn1 as any).value as forge.asn1.Asn1[];
-  const encOid = forge.asn1.derToOid(encSchemeValues[0]);
+  const encOid = safeGetOid(encSchemeValues[0]);
   const iv = forgeStringToBytes((encSchemeValues[1] as any).value as string);
+  log.log(`Encryption OID: ${encOid}`);
 
   // Determine algorithm
   let algorithm: string;
@@ -250,7 +259,7 @@ async function decryptPBES2(
   }
   if (keyLength > 0) aesKeyLen = keyLength;
 
-  console.log(`[nfse-emission] PBES2: ${algorithm} keyLen=${aesKeyLen}, PRF=${prfHash}, iterations=${iterations}, salt=${saltBytes.length}b, iv=${iv.length}b`);
+  log.log(`PBES2 decrypt: ${algorithm} keyLen=${aesKeyLen}, PRF=${prfHash}, iterations=${iterations}, salt=${saltBytes.length}b, iv=${iv.length}b, data=${encryptedData.length}b`);
 
   // Derive key with PBKDF2
   const passwordBytes = new TextEncoder().encode(password);
@@ -265,6 +274,7 @@ async function decryptPBES2(
 
   // Decrypt
   const decrypted = await crypto.subtle.decrypt({ name: algorithm, iv }, derivedKey, encryptedData);
+  log.log(`PBES2 decrypted successfully: ${decrypted.byteLength} bytes`);
   return new Uint8Array(decrypted);
 }
 
@@ -273,23 +283,30 @@ async function decryptPBES2(
 async function decryptPBEData(
   encryptedData: Uint8Array,
   algorithmSeq: forge.asn1.Asn1,
-  password: string
+  password: string,
+  diag?: DiagnosticLogger
 ): Promise<Uint8Array> {
+  const log = diag || new DiagnosticLogger();
   const algValues = (algorithmSeq as any).value as forge.asn1.Asn1[];
-  const oid = forge.asn1.derToOid(algValues[0]);
+  const oid = safeGetOid(algValues[0]);
+  log.log(`PBE algorithm OID: ${oid}`);
 
   // PBES2
   if (oid === "1.2.840.113549.1.5.13") {
-    return decryptPBES2(encryptedData, algValues[1], password);
+    log.log("Using PBES2 (modern) decryption");
+    return decryptPBES2(encryptedData, algValues[1], password, diag);
   }
 
   // PBE-SHA1-3DES (1.2.840.113549.1.12.1.3) - let forge handle it
   // PBE-SHA1-RC2-40 (1.2.840.113549.1.12.1.6) - let forge handle it
   if (oid === "1.2.840.113549.1.12.1.3" || oid === "1.2.840.113549.1.12.1.6") {
+    const algoName = oid === "1.2.840.113549.1.12.1.3" ? "PBE-SHA1-3DES" : "PBE-SHA1-RC2-40";
+    log.log(`Using legacy ${algoName} decryption`);
     const params = (algValues[1] as any).value as forge.asn1.Asn1[];
     const salt = forgeStringToBytes((params[0] as any).value as string);
     const iterations = forge.asn1.derToInteger(params[1]);
     const pwdBytes = passwordToBMPBytes(password);
+    log.log(`${algoName}: iterations=${iterations}, salt=${salt.length}b`);
 
     if (oid === "1.2.840.113549.1.12.1.3") {
       // 3-key 3DES-CBC
@@ -300,7 +317,9 @@ async function decryptPBEData(
       cipher.start({ iv: forge.util.createBuffer(iv) });
       cipher.update(forge.util.createBuffer(encryptedData));
       cipher.finish();
-      return forgeStringToBytes(cipher.output.getBytes());
+      const result = forgeStringToBytes(cipher.output.getBytes());
+      log.log(`3DES decrypted: ${result.length} bytes`);
+      return result;
     } else {
       // RC2-40-CBC
       const key = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 1, 5);
@@ -310,11 +329,13 @@ async function decryptPBEData(
       cipher.start({ iv: forge.util.createBuffer(iv) });
       cipher.update(forge.util.createBuffer(encryptedData));
       cipher.finish();
-      return forgeStringToBytes(cipher.output.getBytes());
+      const result = forgeStringToBytes(cipher.output.getBytes());
+      log.log(`RC2 decrypted: ${result.length} bytes`);
+      return result;
     }
   }
 
-  throw new Error(`Algoritmo PBE não suportado: OID ${oid}`);
+  throw new Error(`Algoritmo PBE não suportado: OID ${oid}. Estrutura ASN1: ${describeAsn1Node(algorithmSeq, 0).substring(0, 500)}`);
 }
 
 // ==================== Custom PKCS#12 Parser ====================
