@@ -498,7 +498,11 @@ async function parsePfxCustom(pfxBase64: string, password: string): Promise<Cert
       diag.log(`SafeContent[${scIdx}]: encryptedData`);
       const encDataWrapper = contentInfo[1];
       let encDataSeq: forge.asn1.Asn1;
-      if ((encDataWrapper as any).constructed && (encDataWrapper as any).type === 0xa0) {
+      const edTagClass = (encDataWrapper as any).tagClass;
+      const edConstructed = (encDataWrapper as any).constructed;
+      if (edConstructed && (edTagClass === 0x80 || (encDataWrapper as any).type === 0xa0)) {
+        encDataSeq = ((encDataWrapper as any).value as forge.asn1.Asn1[])[0];
+      } else if (edConstructed && Array.isArray((encDataWrapper as any).value) && ((encDataWrapper as any).value as any[]).length === 1) {
         encDataSeq = ((encDataWrapper as any).value as forge.asn1.Asn1[])[0];
       } else {
         encDataSeq = encDataWrapper;
