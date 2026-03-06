@@ -263,7 +263,7 @@ export default function NfseNotasEmitidas() {
                 <TableBody>
                   {paginatedNotas.map(nota => {
                     const st = STATUS_MAP[nota.status] || { label: nota.status, variant: 'outline' as const };
-                    const canReprocess = ['fila_emissao', 'rejeitado'].includes(nota.status);
+                    const canReprocess = ['fila_emissao', 'rejeitado', 'enviado'].includes(nota.status);
                     return (
                       <TableRow key={nota.id}>
                         <TableCell>
