@@ -207,6 +207,7 @@ export default function NfseEmitir() {
     setSaving(true);
     const payload = {
       tenant_id: tenant!.id,
+      issuer_id: data.issuer_id,
       status: 'rascunho' as const,
       valor_servico: data.valor_servico,
       valor_deducoes: data.valor_deducoes,

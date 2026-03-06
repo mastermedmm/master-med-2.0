@@ -510,6 +510,7 @@ export type Database = {
           created_at: string
           hash: string | null
           id: string
+          issuer_id: string | null
           nome_arquivo: string
           nota_fiscal_id: string
           storage_path: string | null
@@ -523,6 +524,7 @@ export type Database = {
           created_at?: string
           hash?: string | null
           id?: string
+          issuer_id?: string | null
           nome_arquivo: string
           nota_fiscal_id: string
           storage_path?: string | null
@@ -536,6 +538,7 @@ export type Database = {
           created_at?: string
           hash?: string | null
           id?: string
+          issuer_id?: string | null
           nome_arquivo?: string
           nota_fiscal_id?: string
           storage_path?: string | null
@@ -545,6 +548,13 @@ export type Database = {
           url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "documentos_nfse_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documentos_nfse_nota_fiscal_id_fkey"
             columns: ["nota_fiscal_id"]
@@ -1614,6 +1624,7 @@ export type Database = {
           descricao_servico: string | null
           id: string
           iss_retido: boolean
+          issuer_id: string | null
           motivo_rejeicao: string | null
           municipio_codigo: string | null
           municipio_nome: string | null
@@ -1649,6 +1660,7 @@ export type Database = {
           descricao_servico?: string | null
           id?: string
           iss_retido?: boolean
+          issuer_id?: string | null
           motivo_rejeicao?: string | null
           municipio_codigo?: string | null
           municipio_nome?: string | null
@@ -1684,6 +1696,7 @@ export type Database = {
           descricao_servico?: string | null
           id?: string
           iss_retido?: boolean
+          issuer_id?: string | null
           motivo_rejeicao?: string | null
           municipio_codigo?: string | null
           municipio_nome?: string | null
@@ -1708,6 +1721,13 @@ export type Database = {
           xml_nfse?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "notas_fiscais_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notas_fiscais_nfse_substituida_id_fkey"
             columns: ["nfse_substituida_id"]

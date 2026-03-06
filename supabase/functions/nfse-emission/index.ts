@@ -451,7 +451,8 @@ Deno.serve(async (req: Request) => {
         const dataEmissao = nota.data_emissao || new Date().toISOString().split("T")[0];
         const [ano, mes] = dataEmissao.split("-");
         const chaveNfse = apiResponse.chaveAcesso || dpsNumber;
-        const basePath = `${tenantId}/${ano}/${mes}/${chaveNfse}`;
+        const issuerId = nota.issuer_id || "sem-emitente";
+        const basePath = `${tenantId}/${issuerId}/${ano}/${mes}/${chaveNfse}`;
 
         // Helper: compute SHA256 hash
         async function sha256(content: string): Promise<string> {
@@ -487,6 +488,7 @@ Deno.serve(async (req: Request) => {
         await supabase.from("documentos_nfse").insert([
           {
             tenant_id: tenantId,
+            issuer_id: nota.issuer_id || null,
             nota_fiscal_id,
             tipo: "xml_dps",
             nome_arquivo: `dps_${dpsNumber}.xml`,
@@ -497,6 +499,7 @@ Deno.serve(async (req: Request) => {
           },
           {
             tenant_id: tenantId,
+            issuer_id: nota.issuer_id || null,
             nota_fiscal_id,
             tipo: "xml_nfse",
             nome_arquivo: `nfse_${chaveNfse}.xml`,
