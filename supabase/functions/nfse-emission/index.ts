@@ -102,6 +102,17 @@ async function pkcs12KDF(
   return result;
 }
 
+// ==================== Safe Integer Parser (replaces forge.asn1.derToInteger which is broken in Deno) ====================
+
+function safeAsn1Integer(node: any): number {
+  const raw = node.value as string;
+  let result = 0;
+  for (let i = 0; i < raw.length; i++) {
+    result = (result << 8) | raw.charCodeAt(i);
+  }
+  return result;
+}
+
 // ==================== ASN1 Helper ====================
 
 function bytesToHex(bytes: Uint8Array): string {
