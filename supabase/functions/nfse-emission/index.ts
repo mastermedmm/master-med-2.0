@@ -573,13 +573,23 @@ async function parsePfxCustom(pfxBase64: string, password: string): Promise<Cert
   };
 }
 
-async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{ key?: CryptoKey; keyPem?: string; cert?: forge.pki.Certificate }> {
+async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: DiagnosticLogger): Promise<{ key?: CryptoKey; keyPem?: string; cert?: forge.pki.Certificate }> {
+  const log = diag || getDiag();
   const bagValues = (bag as any).value as forge.asn1.Asn1[];
-  const bagId = forge.asn1.derToOid(bagValues[0]);
+  
+  let bagId: string;
+  try {
+    bagId = safeGetOid(bagValues[0]);
+  } catch (oidErr) {
+    log.error(`Cannot extract bag OID`, oidErr);
+    log.log(`Bag first child: ${describeAsn1Node(bagValues[0], 0)}`);
+    return {};
+  }
+  log.log(`SafeBag OID: ${bagId}`);
 
   // PKCS8ShroudedKeyBag
   if (bagId === "1.2.840.113549.1.12.10.1.2") {
-    console.log("[nfse-emission] Found PKCS8ShroudedKeyBag");
+    log.log("Found PKCS8ShroudedKeyBag - extracting private key");
     const keyBagWrapper = bagValues[1];
     let keyBagAsn1: forge.asn1.Asn1;
     if ((keyBagWrapper as any).constructed && ((keyBagWrapper as any).type === 0xa0)) {
@@ -591,10 +601,13 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
     // EncryptedPrivateKeyInfo: algorithm, encryptedData
     const epkiValues = (keyBagAsn1 as any).value as forge.asn1.Asn1[];
     const algorithm = epkiValues[0];
+    log.log(`Key encryption algorithm: ${describeAsn1Node(algorithm, 0).substring(0, 300)}`);
+    
     const encData = forgeStringToBytes((epkiValues[1] as any).value as string);
+    log.log(`Encrypted key data: ${encData.length} bytes`);
 
-    const decryptedPkcs8 = await decryptPBEData(encData, algorithm, password);
-    console.log(`[nfse-emission] Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes`);
+    const decryptedPkcs8 = await decryptPBEData(encData, algorithm, password, diag);
+    log.log(`Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes`);
 
     // Import to Web Crypto
     const key = await crypto.subtle.importKey(
@@ -604,6 +617,7 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
       true,
       ["sign"]
     );
+    log.log("Private key imported to Web Crypto successfully");
 
     // Also create PEM
     const keyDer = await crypto.subtle.exportKey("pkcs8", key);
@@ -615,6 +629,7 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
 
   // CertBag
   if (bagId === "1.2.840.113549.1.12.10.1.3") {
+    log.log("Found CertBag - extracting certificate");
     const certBagWrapper = bagValues[1];
     let certBagAsn1: forge.asn1.Asn1;
     if ((certBagWrapper as any).constructed && ((certBagWrapper as any).type === 0xa0)) {
@@ -624,7 +639,8 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
     }
 
     const certBagValues = (certBagAsn1 as any).value as forge.asn1.Asn1[];
-    const certTypeOid = forge.asn1.derToOid(certBagValues[0]);
+    const certTypeOid = safeGetOid(certBagValues[0]);
+    log.log(`CertBag type OID: ${certTypeOid}`);
 
     if (certTypeOid === "1.2.840.113549.1.9.22.1") {
       // x509Certificate
@@ -638,6 +654,7 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
 
       const certDer = (certOctet as any).value as string;
       const certAsn1 = forge.asn1.fromDer(certDer);
+
       const cert = forge.pki.certificateFromAsn1(certAsn1);
       console.log(`[nfse-emission] Found certificate: ${cert.subject.getField("CN")?.value || "?"}`);
       return { cert };
