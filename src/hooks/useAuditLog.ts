@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTenant } from '@/contexts/TenantContext';
 
-export type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE';
+export type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE' | 'NFSE_CRIACAO' | 'NFSE_EMISSAO' | 'NFSE_REJEICAO' | 'NFSE_CANCELAMENTO' | 'NFSE_SUBSTITUICAO' | 'NFSE_DOWNLOAD' | 'NFSE_REPROCESSAMENTO';
 
 export interface AuditLogParams {
   action: AuditAction;
