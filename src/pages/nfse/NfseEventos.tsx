@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,7 +106,7 @@ export default function NfseEventos() {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (tipoFilter && tipoFilter !== 'all') {
-        query = query.eq('tipo', tipoFilter);
+        query = query.eq('tipo', tipoFilter as "emissao" | "rejeicao" | "cancelamento" | "substituicao" | "autorizacao" | "reprocessamento" | "consulta" | "envio_dps" | "retorno_prefeitura");
       }
 
       if (search.trim()) {
