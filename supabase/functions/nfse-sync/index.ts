@@ -152,14 +152,25 @@ Deno.serve(async (req: Request) => {
                 usuario_nome: "Sincronização Automática",
               });
 
+              // Audit log
+              await supabase.from("audit_logs").insert({
+                tenant_id: tenant.id,
+                user_id: userId,
+                user_name: "Sincronização Automática",
+                action: "NFSE_EMISSAO",
+                table_name: "notas_fiscais",
+                record_id: nota.id,
+                record_label: `Autorizada via sync: ${numeroNfse}`,
+                new_data: { numero_nfse: numeroNfse, chave_acesso: chaveAcesso, status: "autorizado" },
+              });
+
               result.atualizadas++;
               result.detalhes.push(`Nota ${nota.id} autorizada: ${numeroNfse}`);
             } else if (nota.status === "autorizado") {
               // Verificar eventos na API (cancelamento, substituição)
               // TODO: Chamada real à API para verificar eventos
-              // Simulação: manter como autorizado (sem eventos pendentes)
-
-              // Exemplo de como seria o tratamento de cancelamento detectado:
+              // Quando implementado, registrar audit_logs para cancelamento/substituição:
+              //
               // if (apiData.status === 'cancelado') {
               //   await supabase.from("notas_fiscais")
               //     .update({ status: "cancelado" })
@@ -171,14 +182,33 @@ Deno.serve(async (req: Request) => {
               //     descricao: "Cancelamento detectado via sincronização",
               //     usuario_nome: "Sincronização Automática",
               //   });
+              //   await supabase.from("audit_logs").insert({
+              //     tenant_id: tenant.id,
+              //     user_id: userId,
+              //     user_name: "Sincronização Automática",
+              //     action: "NFSE_CANCELAMENTO",
+              //     table_name: "notas_fiscais",
+              //     record_id: nota.id,
+              //     record_label: `Cancelamento detectado: ${nota.numero_nfse}`,
+              //     new_data: { status: "cancelado" },
+              //   });
               //   result.canceladas++;
               // }
-
-              // Exemplo de substituição:
+              //
               // if (apiData.status === 'substituido') {
               //   await supabase.from("notas_fiscais")
               //     .update({ status: "substituido" })
               //     .eq("id", nota.id);
+              //   await supabase.from("audit_logs").insert({
+              //     tenant_id: tenant.id,
+              //     user_id: userId,
+              //     user_name: "Sincronização Automática",
+              //     action: "NFSE_SUBSTITUICAO",
+              //     table_name: "notas_fiscais",
+              //     record_id: nota.id,
+              //     record_label: `Substituição detectada: ${nota.numero_nfse}`,
+              //     new_data: { status: "substituido" },
+              //   });
               //   result.substituidas++;
               // }
             }
