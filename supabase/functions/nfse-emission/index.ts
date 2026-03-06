@@ -125,7 +125,25 @@ function forgeStringToBytes(str: string): Uint8Array {
   return bytes;
 }
 
-// Safe OID extraction from ASN1 node - fixes "getByte is not a function"
+// Convert Uint8Array to forge binary string
+function uint8ToForgeStr(arr: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i]);
+  return s;
+}
+
+// Remove PKCS#7 padding from decrypted data
+function removePkcs7Padding(data: Uint8Array, blockSize: number): Uint8Array {
+  if (data.length === 0) return data;
+  const padByte = data[data.length - 1];
+  if (padByte < 1 || padByte > blockSize) return data;
+  for (let i = data.length - padByte; i < data.length; i++) {
+    if (data[i] !== padByte) return data;
+  }
+  return data.slice(0, data.length - padByte);
+}
+
+
 function safeGetOid(asn1Node: any): string {
   try {
     if (typeof asn1Node.value === "string") {
@@ -324,24 +342,29 @@ async function decryptPBEData(
       const key = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 1, 24);
       const iv = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 2, 8);
       
-      const cipher = forge.cipher.createDecipher("3DES-CBC", forge.util.createBuffer(key));
-      cipher.start({ iv: forge.util.createBuffer(iv) });
-      cipher.update(forge.util.createBuffer(encryptedData));
-      cipher.finish();
-      const result = forgeStringToBytes(cipher.output.getBytes());
-      log.log(`3DES decrypted: ${result.length} bytes`);
+      const cipher = forge.cipher.createDecipher("3DES-CBC", forge.util.createBuffer(uint8ToForgeStr(key)));
+      cipher.start({ iv: forge.util.createBuffer(uint8ToForgeStr(iv)) });
+      cipher.update(forge.util.createBuffer(uint8ToForgeStr(encryptedData)));
+      const ok = cipher.finish();
+      log.log(`3DES cipher.finish() returned: ${ok}`);
+      const rawResult = forgeStringToBytes(cipher.output.getBytes());
+      const result = removePkcs7Padding(rawResult, 8);
+      log.log(`3DES decrypted: ${rawResult.length} raw -> ${result.length} after padding removal, first byte: 0x${result[0]?.toString(16)}`);
       return result;
     } else {
       // RC2-40-CBC
       const key = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 1, 5);
       const iv = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 2, 8);
       
-      const cipher = forge.cipher.createDecipher("RC2-CBC" as any, forge.util.createBuffer(key));
-      cipher.start({ iv: forge.util.createBuffer(iv) });
-      cipher.update(forge.util.createBuffer(encryptedData));
-      cipher.finish();
+      const cipher = forge.cipher.createDecipher("RC2-CBC" as any, forge.util.createBuffer(uint8ToForgeStr(key)));
+      cipher.start({ iv: forge.util.createBuffer(uint8ToForgeStr(iv)) });
+      cipher.update(forge.util.createBuffer(uint8ToForgeStr(encryptedData)));
+      const ok = cipher.finish();
+      log.log(`RC2 cipher.finish() returned: ${ok}`);
       const result = forgeStringToBytes(cipher.output.getBytes());
-      log.log(`RC2 decrypted: ${result.length} bytes`);
+      const rawResult = forgeStringToBytes(cipher.output.getBytes());
+      const result = removePkcs7Padding(rawResult, 8);
+      log.log(`RC2 decrypted: ${rawResult.length} raw -> ${result.length} after padding removal`);
       return result;
     }
   }
@@ -654,22 +677,81 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: Dia
     log.log(`Encrypted key data: ${encData.length} bytes`);
 
     const decryptedPkcs8 = await decryptPBEData(encData, algorithm, password, diag);
-    log.log(`Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes`);
+    log.log(`Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes, first bytes: 0x${Array.from(decryptedPkcs8.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(' 0x')}`);
 
-    // Import to Web Crypto
-    const key = await crypto.subtle.importKey(
-      "pkcs8",
-      decryptedPkcs8,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      true,
-      ["sign"]
-    );
-    log.log("Private key imported to Web Crypto successfully");
+    // Try multiple approaches to import the private key
+    let key: CryptoKey | undefined;
+    let keyPem: string | undefined;
 
-    // Also create PEM
-    const keyDer = await crypto.subtle.exportKey("pkcs8", key);
-    const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(keyDer)));
-    const keyPem = `-----BEGIN PRIVATE KEY-----\n${keyBase64.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----`;
+    // Approach 1: Try forge to parse the decrypted PKCS#8 PrivateKeyInfo
+    try {
+      const pkcs8Asn1 = forge.asn1.fromDer(uint8ToForgeStr(decryptedPkcs8));
+      log.log(`Decrypted PKCS8 ASN1: ${describeAsn1Node(pkcs8Asn1, 0).substring(0, 200)}`);
+      const forgePrivKey = forge.pki.privateKeyFromAsn1(pkcs8Asn1);
+      keyPem = forge.pki.privateKeyToPem(forgePrivKey);
+      log.log("Private key parsed via forge successfully");
+      
+      // Import to Web Crypto from PEM
+      const pemBody = keyPem.replace(/-----[^-]+-----/g, "").replace(/\s/g, "");
+      const keyDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+      key = await crypto.subtle.importKey(
+        "pkcs8", keyDer,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        true, ["sign"]
+      );
+      log.log("Private key imported to Web Crypto via forge PEM");
+    } catch (forgeKeyErr) {
+      log.warn(`Forge key parse failed: ${forgeKeyErr instanceof Error ? forgeKeyErr.message : forgeKeyErr}`);
+    }
+
+    // Approach 2: Direct Web Crypto import
+    if (!key) {
+      try {
+        key = await crypto.subtle.importKey(
+          "pkcs8", decryptedPkcs8,
+          { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+          true, ["sign"]
+        );
+        const keyDer = await crypto.subtle.exportKey("pkcs8", key);
+        const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(keyDer)));
+        keyPem = `-----BEGIN PRIVATE KEY-----\n${keyBase64.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----`;
+        log.log("Private key imported to Web Crypto directly");
+      } catch (wcErr) {
+        log.error(`Web Crypto direct import failed: ${wcErr instanceof Error ? wcErr.message : wcErr}`);
+      }
+    }
+
+    // Approach 3: Try stripping outer SEQUENCE wrapper (sometimes there's an extra layer)
+    if (!key) {
+      try {
+        const innerAsn1 = forge.asn1.fromDer(uint8ToForgeStr(decryptedPkcs8));
+        const innerValues = (innerAsn1 as any).value;
+        if (Array.isArray(innerValues)) {
+          for (const child of innerValues) {
+            try {
+              const forgePrivKey = forge.pki.privateKeyFromAsn1(child);
+              keyPem = forge.pki.privateKeyToPem(forgePrivKey);
+              const pemBody = keyPem.replace(/-----[^-]+-----/g, "").replace(/\s/g, "");
+              const keyDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+              key = await crypto.subtle.importKey(
+                "pkcs8", keyDer,
+                { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+                true, ["sign"]
+              );
+              log.log("Private key imported via inner ASN1 child");
+              break;
+            } catch { /* try next child */ }
+          }
+        }
+      } catch (innerErr) {
+        log.error(`Inner ASN1 approach failed: ${innerErr instanceof Error ? innerErr.message : innerErr}`);
+      }
+    }
+
+    if (!key || !keyPem) {
+      log.error("All key import approaches failed");
+      return {};
+    }
 
     return { key, keyPem };
   }
