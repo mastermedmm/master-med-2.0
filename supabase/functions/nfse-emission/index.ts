@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import forge from "npm:node-forge@1.3.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -6,12 +7,145 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// URL base da API Nacional NFS-e (ambiente de homologação)
-const NFSE_API_BASE = "https://sefin.nfse.gov.br/sefinnacional";
+// URLs da API Nacional NFS-e
+const NFSE_API_URLS = {
+  homologacao: "https://sefin.producaorestrita.nfse.gov.br/SefinNacional",
+  producao: "https://sefin.nfse.gov.br/SefinNacional",
+};
+
+// ==================== PFX / Certificate Utilities ====================
+
+interface CertificateData {
+  privateKeyPem: string;
+  certificatePem: string;
+  certificateDer: Uint8Array;
+  privateKeyForge: forge.pki.rsa.PrivateKey;
+  serialNumber: string;
+  issuerDN: string;
+  subjectDN: string;
+  notAfter: Date;
+}
+
+function parsePfxCertificate(pfxBase64: string, password: string): CertificateData {
+  const pfxDer = forge.util.decode64(pfxBase64);
+  const pfxAsn1 = forge.asn1.fromDer(pfxDer);
+  const p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, password);
+
+  // Extract private key
+  const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+  const keyBag = keyBags[forge.pki.oids.pkcs8ShroudedKeyBag];
+  if (!keyBag || keyBag.length === 0 || !keyBag[0].key) {
+    throw new Error("Chave privada não encontrada no certificado PFX");
+  }
+  const privateKey = keyBag[0].key as forge.pki.rsa.PrivateKey;
+
+  // Extract certificate
+  const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+  const certBag = certBags[forge.pki.oids.certBag];
+  if (!certBag || certBag.length === 0 || !certBag[0].cert) {
+    throw new Error("Certificado não encontrado no arquivo PFX");
+  }
+  const cert = certBag[0].cert;
+
+  const privateKeyPem = forge.pki.privateKeyToPem(privateKey);
+  const certificatePem = forge.pki.certificateToPem(cert);
+
+  // Get certificate DER for digest
+  const certAsn1 = forge.pki.certificateToAsn1(cert);
+  const certDerBytes = forge.asn1.toDer(certAsn1).getBytes();
+  const certificateDer = new Uint8Array(certDerBytes.length);
+  for (let i = 0; i < certDerBytes.length; i++) {
+    certificateDer[i] = certDerBytes.charCodeAt(i);
+  }
+
+  // Format issuer/subject DN
+  const formatDN = (attrs: forge.pki.CertificateField[]) =>
+    attrs.map((a) => `${a.shortName}=${a.value}`).join(", ");
+
+  return {
+    privateKeyPem,
+    certificatePem,
+    certificateDer,
+    privateKeyForge: privateKey,
+    serialNumber: cert.serialNumber,
+    issuerDN: formatDN(cert.issuer.attributes),
+    subjectDN: formatDN(cert.subject.attributes),
+    notAfter: cert.validity.notAfter,
+  };
+}
+
+// ==================== XML Canonicalization (C14N) ====================
+
+/**
+ * Simplified Exclusive XML Canonicalization (exc-c14n)
+ * For NFS-e DPS signing, we canonicalize the infDPS element
+ */
+function canonicalizeXml(xml: string): string {
+  // Remove XML declaration
+  let canonical = xml.replace(/<\?xml[^?]*\?>\s*/g, "");
+  // Normalize whitespace between tags (but preserve content)
+  canonical = canonical.replace(/>\s+</g, "><");
+  // Trim
+  canonical = canonical.trim();
+  return canonical;
+}
+
+function extractElement(xml: string, tagName: string): string {
+  const regex = new RegExp(`<${tagName}[^>]*>[\\s\\S]*?<\\/${tagName}>`, "m");
+  const match = xml.match(regex);
+  if (!match) throw new Error(`Elemento <${tagName}> não encontrado no XML`);
+  return match[0];
+}
+
+// ==================== XMLDSig Signature ====================
+
+async function signXmlDps(
+  xml: string,
+  certData: CertificateData
+): Promise<string> {
+  // 1. Extract the infDPS element to sign
+  const infDpsContent = extractElement(xml, "infDPS");
+  const canonicalInfoDps = canonicalizeXml(infDpsContent);
+
+  // 2. Calculate SHA-256 digest of canonicalized infDPS
+  const encoder = new TextEncoder();
+  const infDpsBytes = encoder.encode(canonicalInfoDps);
+  const digestBuffer = await crypto.subtle.digest("SHA-256", infDpsBytes);
+  const digestBase64 = btoa(
+    String.fromCharCode(...new Uint8Array(digestBuffer))
+  );
+
+  // 3. Build SignedInfo element
+  const signedInfo = `<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#"><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/><Reference URI=""><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/><DigestValue>${digestBase64}</DigestValue></Reference></SignedInfo>`;
+
+  // 4. Sign the SignedInfo using RSA-SHA256 with node-forge
+  const canonicalSignedInfo = canonicalizeXml(signedInfo);
+  const md = forge.md.sha256.create();
+  md.update(canonicalSignedInfo, "utf8");
+  const signature = certData.privateKeyForge.sign(md);
+  const signatureBase64 = forge.util.encode64(signature);
+
+  // 5. Get X.509 certificate base64 (DER format, without PEM headers)
+  const certBase64 = forge.util.encode64(
+    forge.asn1.toDer(forge.pki.certificateToAsn1(
+      forge.pki.certificateFromPem(certData.certificatePem)
+    )).getBytes()
+  );
+
+  // 6. Build complete Signature element
+  const signatureElement = `<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">${signedInfo}<SignatureValue>${signatureBase64}</SignatureValue><KeyInfo><X509Data><X509Certificate>${certBase64}</X509Certificate></X509Data></KeyInfo></Signature>`;
+
+  // 7. Insert signature before closing </DPS> tag
+  const signedXml = xml.replace("</DPS>", `${signatureElement}</DPS>`);
+
+  return signedXml;
+}
+
+// ==================== DPS XML Builder ====================
 
 interface DpsData {
   infDPS: {
-    tpAmb: number; // 1=produção, 2=homologação
+    tpAmb: number;
     dhEmi: string;
     verAplic: string;
     serie: string;
@@ -23,6 +157,7 @@ interface DpsData {
     prest: {
       CNPJ: string;
       xNome: string;
+      IM?: string;
       end: {
         CEP: string;
         xLgr: string;
@@ -60,7 +195,7 @@ interface DpsData {
     valores: {
       vServPrest: {
         vServ: number;
-        vDescIncworking?: number;
+        vDescIncond?: number;
       };
       vDed?: { xDescOutDed?: string; vDed: number };
       trib: {
@@ -82,6 +217,15 @@ interface DpsData {
   };
 }
 
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 function buildDpsXml(dps: DpsData): string {
   const inf = dps.infDPS;
   const prest = inf.prest;
@@ -95,84 +239,252 @@ function buildDpsXml(dps: DpsData): string {
 
   let tomaEnd = "";
   if (toma.end) {
-    tomaEnd = `<end>
-      ${toma.end.CEP ? `<CEP>${toma.end.CEP}</CEP>` : ""}
-      ${toma.end.xLgr ? `<xLgr>${toma.end.xLgr}</xLgr>` : ""}
-      ${toma.end.nro ? `<nro>${toma.end.nro}</nro>` : ""}
-      ${toma.end.xBairro ? `<xBairro>${toma.end.xBairro}</xBairro>` : ""}
-      ${toma.end.cMun ? `<cMun>${toma.end.cMun}</cMun>` : ""}
-      ${toma.end.UF ? `<UF>${toma.end.UF}</UF>` : ""}
-    </end>`;
+    tomaEnd = `<end>${toma.end.CEP ? `<CEP>${toma.end.CEP}</CEP>` : ""}${toma.end.xLgr ? `<xLgr>${toma.end.xLgr}</xLgr>` : ""}${toma.end.nro ? `<nro>${toma.end.nro}</nro>` : ""}${toma.end.xBairro ? `<xBairro>${toma.end.xBairro}</xBairro>` : ""}${toma.end.cMun ? `<cMun>${toma.end.cMun}</cMun>` : ""}${toma.end.UF ? `<UF>${toma.end.UF}</UF>` : ""}</end>`;
   }
 
   let tribFed = "";
   if (val.trib.tribFed) {
     const tf = val.trib.tribFed;
-    tribFed = `<tribFed>
-      ${tf.pPIS !== undefined ? `<pPIS>${tf.pPIS}</pPIS><vPIS>${tf.vPIS}</vPIS>` : ""}
-      ${tf.pCOFINS !== undefined ? `<pCOFINS>${tf.pCOFINS}</pCOFINS><vCOFINS>${tf.vCOFINS}</vCOFINS>` : ""}
-      ${tf.pINSS !== undefined ? `<pINSS>${tf.pINSS}</pINSS><vINSS>${tf.vINSS}</vINSS>` : ""}
-      ${tf.pIR !== undefined ? `<pIR>${tf.pIR}</pIR><vIR>${tf.vIR}</vIR>` : ""}
-      ${tf.pCSLL !== undefined ? `<pCSLL>${tf.pCSLL}</pCSLL><vCSLL>${tf.vCSLL}</vCSLL>` : ""}
-    </tribFed>`;
+    tribFed = `<tribFed>${tf.pPIS !== undefined ? `<pPIS>${tf.pPIS}</pPIS><vPIS>${tf.vPIS}</vPIS>` : ""}${tf.pCOFINS !== undefined ? `<pCOFINS>${tf.pCOFINS}</pCOFINS><vCOFINS>${tf.vCOFINS}</vCOFINS>` : ""}${tf.pINSS !== undefined ? `<pINSS>${tf.pINSS}</pINSS><vINSS>${tf.vINSS}</vINSS>` : ""}${tf.pIR !== undefined ? `<pIR>${tf.pIR}</pIR><vIR>${tf.vIR}</vIR>` : ""}${tf.pCSLL !== undefined ? `<pCSLL>${tf.pCSLL}</pCSLL><vCSLL>${tf.vCSLL}</vCSLL>` : ""}</tribFed>`;
   }
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
-  <infDPS>
-    <tpAmb>${inf.tpAmb}</tpAmb>
-    <dhEmi>${inf.dhEmi}</dhEmi>
-    <verAplic>${inf.verAplic}</verAplic>
-    <serie>${inf.serie}</serie>
-    <nDPS>${inf.nDPS}</nDPS>
-    <dCompet>${inf.dCompet}</dCompet>
-    <tpEmit>${inf.tpEmit}</tpEmit>
-    <cLocEmi>${inf.cLocEmi}</cLocEmi>
-    <prest>
-      <CNPJ>${prest.CNPJ}</CNPJ>
-      <xNome>${escapeXml(prest.xNome)}</xNome>
-    </prest>
-    <toma>
-      ${tomaDoc}
-      <xNome>${escapeXml(toma.xNome)}</xNome>
-      ${tomaEnd}
-      ${toma.email ? `<email>${escapeXml(toma.email)}</email>` : ""}
-    </toma>
-    <serv>
-      <cServ>
-        <cTribNac>${serv.cServ.cTribNac}</cTribNac>
-        ${serv.cServ.CNAE ? `<CNAE>${serv.cServ.CNAE}</CNAE>` : ""}
-        <xDescServ>${escapeXml(serv.cServ.xDescServ)}</xDescServ>
-      </cServ>
-      ${serv.cMun ? `<cMun>${serv.cMun}</cMun>` : ""}
-    </serv>
-    <valores>
-      <vServPrest>
-        <vServ>${val.vServPrest.vServ.toFixed(2)}</vServ>
-      </vServPrest>
-      ${val.vDed ? `<vDed><vDed>${val.vDed.vDed.toFixed(2)}</vDed></vDed>` : ""}
-      <trib>
-        <tribMun>
-          <tribISSQN>${val.trib.tribMun.tribISSQN}</tribISSQN>
-          ${val.trib.tribMun.BM ? `<BM><pAliq>${val.trib.tribMun.BM.pAliq}</pAliq><tpRetISSQN>${val.trib.tribMun.BM.tpRetISSQN}</tpRetISSQN></BM>` : ""}
-        </tribMun>
-        ${tribFed}
-      </trib>
-    </valores>
-  </infDPS>
+<infDPS>
+<tpAmb>${inf.tpAmb}</tpAmb>
+<dhEmi>${inf.dhEmi}</dhEmi>
+<verAplic>${inf.verAplic}</verAplic>
+<serie>${inf.serie}</serie>
+<nDPS>${inf.nDPS}</nDPS>
+<dCompet>${inf.dCompet}</dCompet>
+<tpEmit>${inf.tpEmit}</tpEmit>
+<cLocEmi>${inf.cLocEmi}</cLocEmi>
+<prest>
+<CNPJ>${prest.CNPJ}</CNPJ>
+<xNome>${escapeXml(prest.xNome)}</xNome>
+${prest.IM ? `<IM>${prest.IM}</IM>` : ""}
+</prest>
+<toma>
+${tomaDoc}
+<xNome>${escapeXml(toma.xNome)}</xNome>
+${tomaEnd}
+${toma.email ? `<email>${escapeXml(toma.email)}</email>` : ""}
+</toma>
+<serv>
+<cServ>
+<cTribNac>${serv.cServ.cTribNac}</cTribNac>
+${serv.cServ.CNAE ? `<CNAE>${serv.cServ.CNAE}</CNAE>` : ""}
+<xDescServ>${escapeXml(serv.cServ.xDescServ)}</xDescServ>
+</cServ>
+${serv.cMun ? `<cMun>${serv.cMun}</cMun>` : ""}
+</serv>
+<valores>
+<vServPrest>
+<vServ>${val.vServPrest.vServ.toFixed(2)}</vServ>
+</vServPrest>
+${val.vDed ? `<vDed><vDed>${val.vDed.vDed.toFixed(2)}</vDed></vDed>` : ""}
+<trib>
+<tribMun>
+<tribISSQN>${val.trib.tribMun.tribISSQN}</tribISSQN>
+${val.trib.tribMun.BM ? `<BM><pAliq>${val.trib.tribMun.BM.pAliq}</pAliq><tpRetISSQN>${val.trib.tribMun.BM.tpRetISSQN}</tpRetISSQN></BM>` : ""}
+</tribMun>
+${tribFed}
+</trib>
+</valores>
+</infDPS>
 </DPS>`;
 
   return xml;
 }
 
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+// ==================== API Nacional NFS-e Communication ====================
+
+interface ApiNfseResponse {
+  success: boolean;
+  protocolo?: string;
+  chaveAcesso?: string;
+  xmlRetorno?: string;
+  status?: string;
+  motivo?: string;
+  httpStatus?: number;
 }
+
+async function enviarDpsApiNacional(
+  xmlAssinado: string,
+  certData: CertificateData,
+  ambiente: string
+): Promise<ApiNfseResponse> {
+  const baseUrl = ambiente === "producao" ? NFSE_API_URLS.producao : NFSE_API_URLS.homologacao;
+  const url = `${baseUrl}/nfse`;
+
+  console.log(`[nfse-emission] Enviando DPS para ${url}`);
+
+  // Compress XML with gzip and encode as base64 (required by API Nacional)
+  const xmlBytes = new TextEncoder().encode(xmlAssinado);
+  const cs = new CompressionStream("gzip");
+  const writer = cs.writable.getWriter();
+  writer.write(xmlBytes);
+  writer.close();
+  const compressedChunks: Uint8Array[] = [];
+  const reader = cs.readable.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    compressedChunks.push(value);
+  }
+  const totalLength = compressedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const compressedBytes = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of compressedChunks) {
+    compressedBytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  const xmlGzipBase64 = btoa(String.fromCharCode(...compressedBytes));
+
+  // Build JSON payload (API Nacional accepts JSON with gzipped XML)
+  const payload = {
+    dpsXmlGZipB64: xmlGzipBase64,
+  };
+
+  try {
+    // Try to create an HTTP client with mTLS (certificate-based auth)
+    // Note: This requires Deno.createHttpClient which may not be available in all runtimes
+    let response: Response;
+
+    // Extract PEM cert and key for mTLS
+    const certPem = certData.certificatePem;
+    const keyPem = certData.privateKeyPem;
+
+    try {
+      // @ts-ignore - Deno.createHttpClient may not be in type definitions
+      const httpClient = Deno.createHttpClient({
+        certChain: certPem,
+        privateKey: keyPem,
+      });
+
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(payload),
+        // @ts-ignore - client option for Deno
+        client: httpClient,
+      });
+    } catch (mtlsError) {
+      console.warn("[nfse-emission] mTLS não disponível neste runtime, tentando sem mTLS:", mtlsError);
+      // Fallback: try without mTLS (will likely fail with auth error from API)
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    const responseText = await response.text();
+    console.log(`[nfse-emission] Status: ${response.status}, Resposta: ${responseText.substring(0, 500)}`);
+
+    if (response.ok) {
+      // Parse successful response
+      try {
+        const responseData = JSON.parse(responseText);
+        // API Nacional returns chaveAcesso and XML da NFS-e
+        return {
+          success: true,
+          protocolo: responseData.protocolo || responseData.idDPS,
+          chaveAcesso: responseData.chaveAcesso || responseData.chNFSe,
+          xmlRetorno: responseData.nfseXmlGZipB64
+            ? await decompressGzipBase64(responseData.nfseXmlGZipB64)
+            : responseText,
+          status: "autorizado",
+          httpStatus: response.status,
+        };
+      } catch {
+        // Response might be XML
+        const chaveMatch = responseText.match(/<chaveAcesso>([^<]+)<\/chaveAcesso>/);
+        const protocoloMatch = responseText.match(/<protocolo>([^<]+)<\/protocolo>/);
+        return {
+          success: true,
+          protocolo: protocoloMatch?.[1],
+          chaveAcesso: chaveMatch?.[1],
+          xmlRetorno: responseText,
+          status: "autorizado",
+          httpStatus: response.status,
+        };
+      }
+    } else {
+      // Parse error response
+      let motivo = `HTTP ${response.status}`;
+      try {
+        const errorData = JSON.parse(responseText);
+        motivo = errorData.mensagem || errorData.message || errorData.erro || JSON.stringify(errorData);
+      } catch {
+        motivo = responseText.substring(0, 500) || `Erro HTTP ${response.status}`;
+      }
+      return {
+        success: false,
+        status: "rejeitado",
+        motivo,
+        xmlRetorno: responseText,
+        httpStatus: response.status,
+      };
+    }
+  } catch (error) {
+    console.error("[nfse-emission] Erro na chamada à API Nacional:", error);
+    return {
+      success: false,
+      status: "erro_comunicacao",
+      motivo: error instanceof Error ? error.message : "Erro de comunicação com API Nacional",
+    };
+  }
+}
+
+async function decompressGzipBase64(gzipBase64: string): Promise<string> {
+  try {
+    const binaryString = atob(gzipBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const ds = new DecompressionStream("gzip");
+    const writer = ds.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    const reader = ds.readable.getReader();
+    const chunks: Uint8Array[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+    const result = new Uint8Array(totalLength);
+    let off = 0;
+    for (const c of chunks) {
+      result.set(c, off);
+      off += c.length;
+    }
+    return new TextDecoder().decode(result);
+  } catch {
+    return gzipBase64; // Return as-is if decompression fails
+  }
+}
+
+// ==================== SHA-256 Helper ====================
+
+async function sha256(content: string): Promise<string> {
+  const data = new TextEncoder().encode(content);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// ==================== Main Handler ====================
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -192,7 +504,6 @@ Deno.serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Auth client for user verification
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -208,7 +519,6 @@ Deno.serve(async (req: Request) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    // Service role client for DB operations
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const { nota_fiscal_id } = await req.json();
@@ -223,7 +533,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 1. Buscar dados da nota fiscal
+    // 1. Buscar nota fiscal
     const { data: nota, error: notaError } = await supabase
       .from("notas_fiscais")
       .select("*")
@@ -240,7 +550,75 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 2. Buscar dados do tomador
+    const tenantId = nota.tenant_id;
+    const issuerId = nota.issuer_id;
+
+    // 2. Buscar configuração do emitente (certificado + ambiente)
+    if (!issuerId) {
+      return new Response(
+        JSON.stringify({ error: "Nota fiscal sem emitente (issuer_id) definido. Selecione o emitente antes de emitir." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { data: config, error: configError } = await supabase
+      .from("configuracoes_nfse")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("issuer_id", issuerId)
+      .single();
+
+    if (configError || !config) {
+      return new Response(
+        JSON.stringify({ error: "Configuração NFS-e não encontrada para este emitente. Configure o certificado em Configurações NFS-e." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!config.certificado_base64 || !config.certificado_senha) {
+      return new Response(
+        JSON.stringify({ error: "Certificado digital A1 não configurado para este emitente." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 3. Parse do certificado PFX
+    let certData: CertificateData;
+    try {
+      certData = parsePfxCertificate(config.certificado_base64, config.certificado_senha);
+      console.log(`[nfse-emission] Certificado parsed: ${certData.subjectDN}, válido até ${certData.notAfter.toISOString()}`);
+
+      // Verificar validade
+      if (certData.notAfter < new Date()) {
+        return new Response(
+          JSON.stringify({ error: `Certificado digital expirado em ${certData.notAfter.toISOString().split('T')[0]}. Atualize o certificado nas configurações.` }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+    } catch (certError) {
+      console.error("[nfse-emission] Erro ao parsear certificado:", certError);
+      return new Response(
+        JSON.stringify({ error: "Erro ao ler certificado digital. Verifique se o arquivo PFX e a senha estão corretos.", details: certError instanceof Error ? certError.message : "Erro desconhecido" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 4. Buscar dados do tomador
     let tomador = null;
     if (nota.tomador_id) {
       const { data } = await supabase
@@ -251,14 +629,18 @@ Deno.serve(async (req: Request) => {
       tomador = data;
     }
 
-    // 3. Buscar dados do emitente (issuer) via tenant settings ou issuers table
-    // Para simplificação, usamos os dados já presentes na nota
-    const tenantId = nota.tenant_id;
+    // 5. Buscar dados do emitente (issuer)
+    const { data: issuer } = await supabase
+      .from("issuers")
+      .select("*")
+      .eq("id", issuerId)
+      .single();
 
-    // 4. Gerar número sequencial da DPS
+    // 6. Gerar número sequencial da DPS
     const dpsNumber = `DPS-${Date.now()}`;
+    const ambiente = config.ambiente === "producao" ? 1 : 2;
 
-    // 5. Montar estrutura DPS
+    // 7. Montar estrutura DPS com dados reais do emitente
     const tomaDoc: Record<string, string> = {};
     if (tomador) {
       const doc = tomador.cpf_cnpj.replace(/\D/g, "");
@@ -266,26 +648,29 @@ Deno.serve(async (req: Request) => {
       else tomaDoc.CPF = doc;
     }
 
+    const prestadorCnpj = config.prestador_cnpj?.replace(/\D/g, "") || issuer?.cnpj?.replace(/\D/g, "") || "";
+
     const dpsData: DpsData = {
       infDPS: {
-        tpAmb: 2, // homologação
+        tpAmb: ambiente,
         dhEmi: new Date().toISOString(),
         verAplic: "MasterMed-1.0",
         serie: "NFS",
         nDPS: dpsNumber,
         dCompet: nota.data_emissao || new Date().toISOString().split("T")[0],
         tpEmit: 1,
-        cLocEmi: nota.municipio_codigo || "0000000",
+        cLocEmi: config.municipio_codigo || nota.municipio_codigo || "0000000",
         prest: {
-          CNPJ: "00000000000000", // será preenchido com dados reais do emitente
-          xNome: "Prestador",
+          CNPJ: prestadorCnpj,
+          xNome: config.prestador_razao_social || issuer?.name || "Prestador",
+          IM: config.inscricao_municipal || undefined,
           end: {
-            CEP: "00000000",
+            CEP: "",
             xLgr: "",
             nro: "",
             xBairro: "",
-            cMun: nota.municipio_codigo || "",
-            UF: "",
+            cMun: config.municipio_codigo || "",
+            UF: config.municipio_uf || issuer?.state || "",
           },
         },
         toma: {
@@ -309,7 +694,7 @@ Deno.serve(async (req: Request) => {
             CNAE: nota.codigo_cnae || undefined,
             xDescServ: nota.descricao_servico || "",
           },
-          cMun: nota.municipio_codigo || undefined,
+          cMun: config.municipio_codigo || nota.municipio_codigo || undefined,
         },
         valores: {
           vServPrest: {
@@ -334,16 +719,11 @@ Deno.serve(async (req: Request) => {
               nota.valor_ir > 0 ||
               nota.valor_csll > 0
                 ? {
-                    vPIS: nota.valor_pis,
-                    pPIS: 0,
-                    vCOFINS: nota.valor_cofins,
-                    pCOFINS: 0,
-                    vINSS: nota.valor_inss,
-                    pINSS: 0,
-                    vIR: nota.valor_ir,
-                    pIR: 0,
-                    vCSLL: nota.valor_csll,
-                    pCSLL: 0,
+                    vPIS: nota.valor_pis, pPIS: 0,
+                    vCOFINS: nota.valor_cofins, pCOFINS: 0,
+                    vINSS: nota.valor_inss, pINSS: 0,
+                    vIR: nota.valor_ir, pIR: 0,
+                    vCSLL: nota.valor_csll, pCSLL: 0,
                   }
                 : undefined,
           },
@@ -351,17 +731,33 @@ Deno.serve(async (req: Request) => {
       },
     };
 
-    // 6. Converter para XML
+    // 8. Converter para XML
     const xmlDps = buildDpsXml(dpsData);
 
-    // 7. Registrar DPS enviada
+    // 9. Assinar XML digitalmente
+    let xmlAssinado: string;
+    try {
+      xmlAssinado = await signXmlDps(xmlDps, certData);
+      console.log("[nfse-emission] XML assinado com sucesso");
+    } catch (signError) {
+      console.error("[nfse-emission] Erro ao assinar XML:", signError);
+      return new Response(
+        JSON.stringify({ error: "Erro ao assinar XML digitalmente", details: signError instanceof Error ? signError.message : "Erro desconhecido" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 10. Registrar DPS enviada
     const { data: dps, error: dpsInsertError } = await supabase
       .from("dps_enviadas")
       .insert({
         tenant_id: tenantId,
         nota_fiscal_id: nota_fiscal_id,
         status: "enviando",
-        xml_envio: xmlDps,
+        xml_envio: xmlAssinado,
         enviado_em: new Date().toISOString(),
         numero_lote: dpsNumber,
       })
@@ -379,48 +775,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 8. Enviar para a API Nacional NFS-e
-    let apiResponse: { success: boolean; protocolo?: string; chaveAcesso?: string; xmlRetorno?: string; status?: string; motivo?: string } = {
-      success: false,
-    };
+    // 11. Enviar para a API Nacional NFS-e
+    const apiResponse = await enviarDpsApiNacional(xmlAssinado, certData, config.ambiente);
 
-    try {
-      // TODO: Substituir por chamada real à API Nacional NFS-e quando as credenciais estiverem configuradas
-      // const nfseApiKey = Deno.env.get('NFSE_API_KEY');
-      // const nfseCert = Deno.env.get('NFSE_CERTIFICATE');
-      //
-      // const response = await fetch(`${NFSE_API_BASE}/contribuinte/nfse`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/xml',
-      //     'Authorization': `Bearer ${nfseApiKey}`,
-      //   },
-      //   body: xmlDps,
-      // });
-      //
-      // const responseText = await response.text();
-      // Parse response XML...
-
-      // Simulação para ambiente de desenvolvimento
-      const protocolo = `PROT-${Date.now()}`;
-      const chaveAcesso = `NFSe-${tenantId.substring(0, 8)}-${Date.now()}`;
-      apiResponse = {
-        success: true,
-        protocolo,
-        chaveAcesso,
-        xmlRetorno: `<nfseResultado><protocolo>${protocolo}</protocolo><chaveAcesso>${chaveAcesso}</chaveAcesso><status>autorizado</status></nfseResultado>`,
-        status: "autorizado",
-      };
-    } catch (apiError) {
-      console.error("Erro ao chamar API NFS-e:", apiError);
-      apiResponse = {
-        success: false,
-        motivo: apiError instanceof Error ? apiError.message : "Erro desconhecido na API",
-        status: "rejeitado",
-      };
-    }
-
-    // 9. Atualizar DPS com retorno
+    // 12. Atualizar DPS com retorno
     await supabase
       .from("dps_enviadas")
       .update({
@@ -434,7 +792,15 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", dps.id);
 
-    // 10. Atualizar status da nota fiscal
+    // 13. Atualizar status da nota fiscal e registrar documentos/eventos
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", userId)
+      .single();
+
+    const userName = profileData?.full_name || "Sistema";
+
     if (apiResponse.success) {
       await supabase
         .from("notas_fiscais")
@@ -446,33 +812,22 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", nota_fiscal_id);
 
-      // Salvar XMLs no storage e registrar documentos
+      // Save XMLs to storage
       if (apiResponse.xmlRetorno) {
         const dataEmissao = nota.data_emissao || new Date().toISOString().split("T")[0];
         const [ano, mes] = dataEmissao.split("-");
         const chaveNfse = apiResponse.chaveAcesso || dpsNumber;
-        const issuerId = nota.issuer_id || "sem-emitente";
         const basePath = `${tenantId}/${issuerId}/${ano}/${mes}/${chaveNfse}`;
 
-        // Helper: compute SHA256 hash
-        async function sha256(content: string): Promise<string> {
-          const encoder = new TextEncoder();
-          const data = encoder.encode(content);
-          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-          const hashArray = Array.from(new Uint8Array(hashBuffer));
-          return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
-        }
-
-        const dpsHash = await sha256(xmlDps);
+        const dpsHash = await sha256(xmlAssinado);
         const nfseHash = await sha256(apiResponse.xmlRetorno);
 
-        // Upload to storage
         const dpsPath = `${basePath}/dps_${dpsNumber}.xml`;
         const nfsePath = `${basePath}/nfse_${chaveNfse}.xml`;
 
         await supabase.storage
           .from("nfse-documentos")
-          .upload(dpsPath, new Blob([xmlDps], { type: "application/xml" }), {
+          .upload(dpsPath, new Blob([xmlAssinado], { type: "application/xml" }), {
             contentType: "application/xml",
             upsert: false,
           });
@@ -484,22 +839,21 @@ Deno.serve(async (req: Request) => {
             upsert: false,
           });
 
-        // Register documents in DB
         await supabase.from("documentos_nfse").insert([
           {
             tenant_id: tenantId,
-            issuer_id: nota.issuer_id || null,
+            issuer_id: issuerId,
             nota_fiscal_id,
             tipo: "xml_dps",
             nome_arquivo: `dps_${dpsNumber}.xml`,
             storage_path: dpsPath,
             hash: dpsHash,
-            tamanho_bytes: new TextEncoder().encode(xmlDps).length,
+            tamanho_bytes: new TextEncoder().encode(xmlAssinado).length,
             conteudo: null,
           },
           {
             tenant_id: tenantId,
-            issuer_id: nota.issuer_id || null,
+            issuer_id: issuerId,
             nota_fiscal_id,
             tipo: "xml_nfse",
             nome_arquivo: `nfse_${chaveNfse}.xml`,
@@ -511,7 +865,7 @@ Deno.serve(async (req: Request) => {
         ]);
       }
 
-      // Registrar evento de autorização
+      // Register authorization event
       await supabase.from("eventos_nfse").insert({
         tenant_id: tenantId,
         nota_fiscal_id,
@@ -521,17 +875,10 @@ Deno.serve(async (req: Request) => {
         codigo_retorno: apiResponse.protocolo,
       });
 
-      // Registrar no audit_logs
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("user_id", userId)
-        .single();
-
       await supabase.from("audit_logs").insert({
         tenant_id: tenantId,
         user_id: userId,
-        user_name: profileData?.full_name || "Sistema",
+        user_name: userName,
         action: "NFSE_EMISSAO",
         table_name: "notas_fiscais",
         record_id: nota_fiscal_id,
@@ -557,35 +904,29 @@ Deno.serve(async (req: Request) => {
         mensagem: apiResponse.motivo,
       });
 
-      // Registrar rejeição no audit_logs
-      const { data: profileData2 } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("user_id", userId)
-        .single();
-
       await supabase.from("audit_logs").insert({
         tenant_id: tenantId,
         user_id: userId,
-        user_name: profileData2?.full_name || "Sistema",
+        user_name: userName,
         action: "NFSE_REJEICAO",
         table_name: "notas_fiscais",
         record_id: nota_fiscal_id,
         record_label: apiResponse.motivo || "Rejeitada",
-        new_data: { motivo: apiResponse.motivo, status: "rejeitado" },
+        new_data: { motivo: apiResponse.motivo, status: "rejeitado", httpStatus: apiResponse.httpStatus },
       });
     }
 
-    // 11. Registrar log de integração
+    // 14. Log de integração
     await supabase.from("logs_integracao_nfse").insert({
       tenant_id: tenantId,
       nota_fiscal_id,
       operacao: "emissao_dps",
-      endpoint: NFSE_API_BASE,
+      endpoint: ambiente === 1 ? NFSE_API_URLS.producao : NFSE_API_URLS.homologacao,
       sucesso: apiResponse.success,
-      request_payload: xmlDps.substring(0, 5000),
+      request_payload: xmlAssinado.substring(0, 5000),
       response_payload: apiResponse.xmlRetorno?.substring(0, 5000) || null,
       erro_mensagem: apiResponse.motivo || null,
+      http_status: apiResponse.httpStatus || null,
     });
 
     return new Response(
