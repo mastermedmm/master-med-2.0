@@ -677,22 +677,81 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: Dia
     log.log(`Encrypted key data: ${encData.length} bytes`);
 
     const decryptedPkcs8 = await decryptPBEData(encData, algorithm, password, diag);
-    log.log(`Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes`);
+    log.log(`Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes, first bytes: 0x${Array.from(decryptedPkcs8.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(' 0x')}`);
 
-    // Import to Web Crypto
-    const key = await crypto.subtle.importKey(
-      "pkcs8",
-      decryptedPkcs8,
-      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-      true,
-      ["sign"]
-    );
-    log.log("Private key imported to Web Crypto successfully");
+    // Try multiple approaches to import the private key
+    let key: CryptoKey | undefined;
+    let keyPem: string | undefined;
 
-    // Also create PEM
-    const keyDer = await crypto.subtle.exportKey("pkcs8", key);
-    const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(keyDer)));
-    const keyPem = `-----BEGIN PRIVATE KEY-----\n${keyBase64.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----`;
+    // Approach 1: Try forge to parse the decrypted PKCS#8 PrivateKeyInfo
+    try {
+      const pkcs8Asn1 = forge.asn1.fromDer(uint8ToForgeStr(decryptedPkcs8));
+      log.log(`Decrypted PKCS8 ASN1: ${describeAsn1Node(pkcs8Asn1, 0).substring(0, 200)}`);
+      const forgePrivKey = forge.pki.privateKeyFromAsn1(pkcs8Asn1);
+      keyPem = forge.pki.privateKeyToPem(forgePrivKey);
+      log.log("Private key parsed via forge successfully");
+      
+      // Import to Web Crypto from PEM
+      const pemBody = keyPem.replace(/-----[^-]+-----/g, "").replace(/\s/g, "");
+      const keyDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+      key = await crypto.subtle.importKey(
+        "pkcs8", keyDer,
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        true, ["sign"]
+      );
+      log.log("Private key imported to Web Crypto via forge PEM");
+    } catch (forgeKeyErr) {
+      log.warn(`Forge key parse failed: ${forgeKeyErr instanceof Error ? forgeKeyErr.message : forgeKeyErr}`);
+    }
+
+    // Approach 2: Direct Web Crypto import
+    if (!key) {
+      try {
+        key = await crypto.subtle.importKey(
+          "pkcs8", decryptedPkcs8,
+          { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+          true, ["sign"]
+        );
+        const keyDer = await crypto.subtle.exportKey("pkcs8", key);
+        const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(keyDer)));
+        keyPem = `-----BEGIN PRIVATE KEY-----\n${keyBase64.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----`;
+        log.log("Private key imported to Web Crypto directly");
+      } catch (wcErr) {
+        log.error(`Web Crypto direct import failed: ${wcErr instanceof Error ? wcErr.message : wcErr}`);
+      }
+    }
+
+    // Approach 3: Try stripping outer SEQUENCE wrapper (sometimes there's an extra layer)
+    if (!key) {
+      try {
+        const innerAsn1 = forge.asn1.fromDer(uint8ToForgeStr(decryptedPkcs8));
+        const innerValues = (innerAsn1 as any).value;
+        if (Array.isArray(innerValues)) {
+          for (const child of innerValues) {
+            try {
+              const forgePrivKey = forge.pki.privateKeyFromAsn1(child);
+              keyPem = forge.pki.privateKeyToPem(forgePrivKey);
+              const pemBody = keyPem.replace(/-----[^-]+-----/g, "").replace(/\s/g, "");
+              const keyDer = Uint8Array.from(atob(pemBody), c => c.charCodeAt(0));
+              key = await crypto.subtle.importKey(
+                "pkcs8", keyDer,
+                { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+                true, ["sign"]
+              );
+              log.log("Private key imported via inner ASN1 child");
+              break;
+            } catch { /* try next child */ }
+          }
+        }
+      } catch (innerErr) {
+        log.error(`Inner ASN1 approach failed: ${innerErr instanceof Error ? innerErr.message : innerErr}`);
+      }
+    }
+
+    if (!key || !keyPem) {
+      log.error("All key import approaches failed");
+      return {};
+    }
 
     return { key, keyPem };
   }
