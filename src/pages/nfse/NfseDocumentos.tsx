@@ -194,7 +194,7 @@ export default function NfseDocumentos() {
       } else {
         setPreviewContent('Conteúdo não disponível para visualização.');
       }
-    } catch (err) {
+    } catch {
       setPreviewContent('Erro ao carregar conteúdo do documento.');
     }
     setLoadingPreview(false);
