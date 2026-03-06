@@ -20,7 +20,16 @@ export type ModuleName =
   | 'users' 
   | 'permissions'
   | 'settings'
-  | 'audit_logs';
+  | 'audit_logs'
+  | 'nfse.dashboard'
+  | 'nfse.emitir'
+  | 'nfse.visualizar'
+  | 'nfse.rejeicoes'
+  | 'nfse.eventos'
+  | 'nfse.sincronizacao'
+  | 'nfse.documentos'
+  | 'nfse.configuracoes'
+  | 'nfse.reprocessar';
 
 export type AppRole = 'admin' | 'operador' | 'financeiro';
 

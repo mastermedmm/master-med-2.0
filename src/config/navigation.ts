@@ -21,6 +21,14 @@ import {
   Cloud,
   History,
   Handshake,
+  FileText,
+  FilePlus,
+  FileCheck,
+  AlertTriangle,
+  ClipboardList,
+  RefreshCw,
+  FolderDown,
+  Cog,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 
@@ -63,4 +71,15 @@ export const adminNav: AppNavItem[] = [
   { label: "Configurações", to: ROUTES.settings, icon: Settings, module: "settings" },
 ];
 
-export const topNav: AppNavItem[] = [...primaryNav, ...financialNav, ...registrationNav, ...adminNav];
+export const nfseNav: AppNavItem[] = [
+  { label: "Dashboard", to: ROUTES.nfse.dashboard, icon: LayoutDashboard, module: "nfse.dashboard" },
+  { label: "Emitir Nota", to: ROUTES.nfse.emitir, icon: FilePlus, module: "nfse.emitir" },
+  { label: "Notas Emitidas", to: ROUTES.nfse.notasEmitidas, icon: FileCheck, module: "nfse.visualizar" },
+  { label: "Rejeições", to: ROUTES.nfse.rejeicoes, icon: AlertTriangle, module: "nfse.rejeicoes" },
+  { label: "Eventos da Nota", to: ROUTES.nfse.eventos, icon: ClipboardList, module: "nfse.eventos" },
+  { label: "Sincronização", to: ROUTES.nfse.sincronizacao, icon: RefreshCw, module: "nfse.sincronizacao" },
+  { label: "Documentos XML/PDF", to: ROUTES.nfse.documentos, icon: FolderDown, module: "nfse.documentos" },
+  { label: "Configurações", to: ROUTES.nfse.configuracoes, icon: Cog, module: "nfse.configuracoes" },
+];
+
+export const topNav: AppNavItem[] = [...primaryNav, ...financialNav, ...registrationNav, ...adminNav, ...nfseNav];

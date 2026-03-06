@@ -27,6 +27,18 @@ export const ROUTES = {
   permissions: '/permissoes',
   settings: '/configuracoes',
   
+  // NFSE
+  nfse: {
+    dashboard: '/nfse',
+    emitir: '/nfse/emitir',
+    notasEmitidas: '/nfse/notas-emitidas',
+    rejeicoes: '/nfse/rejeicoes',
+    eventos: '/nfse/eventos',
+    sincronizacao: '/nfse/sincronizacao',
+    documentos: '/nfse/documentos',
+    configuracoes: '/nfse/configuracoes',
+  },
+  
   // Portal do Médico
   doctorPortal: {
     root: '/portal-medico',
