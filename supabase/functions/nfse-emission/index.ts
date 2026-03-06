@@ -367,7 +367,9 @@ async function parsePfxCertificate(pfxBase64: string, password: string): Promise
     const pfxSeq = (pfxAsn1 as any).value as forge.asn1.Asn1[];
     if (pfxSeq[0]) {
       try {
-        const version = forge.asn1.derToInteger(pfxSeq[0]);
+        const vRaw = (pfxSeq[0] as any).value as string;
+        let version = 0;
+        for (let vi = 0; vi < vRaw.length; vi++) version = (version << 8) | vRaw.charCodeAt(vi);
         diag.log(`PFX version: ${version}`);
       } catch {}
     }
