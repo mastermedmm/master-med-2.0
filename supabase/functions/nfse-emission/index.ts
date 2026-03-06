@@ -446,22 +446,64 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", nota_fiscal_id);
 
-      // Salvar XML da NFS-e como documento
+      // Salvar XMLs no storage e registrar documentos
       if (apiResponse.xmlRetorno) {
+        const dataEmissao = nota.data_emissao || new Date().toISOString().split("T")[0];
+        const [ano, mes] = dataEmissao.split("-");
+        const chaveNfse = apiResponse.chaveAcesso || dpsNumber;
+        const basePath = `${tenantId}/${ano}/${mes}/${chaveNfse}`;
+
+        // Helper: compute SHA256 hash
+        async function sha256(content: string): Promise<string> {
+          const encoder = new TextEncoder();
+          const data = encoder.encode(content);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+        }
+
+        const dpsHash = await sha256(xmlDps);
+        const nfseHash = await sha256(apiResponse.xmlRetorno);
+
+        // Upload to storage
+        const dpsPath = `${basePath}/dps_${dpsNumber}.xml`;
+        const nfsePath = `${basePath}/nfse_${chaveNfse}.xml`;
+
+        await supabase.storage
+          .from("nfse-documentos")
+          .upload(dpsPath, new Blob([xmlDps], { type: "application/xml" }), {
+            contentType: "application/xml",
+            upsert: false,
+          });
+
+        await supabase.storage
+          .from("nfse-documentos")
+          .upload(nfsePath, new Blob([apiResponse.xmlRetorno], { type: "application/xml" }), {
+            contentType: "application/xml",
+            upsert: false,
+          });
+
+        // Register documents in DB
         await supabase.from("documentos_nfse").insert([
           {
             tenant_id: tenantId,
             nota_fiscal_id,
             tipo: "xml_dps",
             nome_arquivo: `dps_${dpsNumber}.xml`,
-            conteudo: xmlDps,
+            storage_path: dpsPath,
+            hash: dpsHash,
+            tamanho_bytes: new TextEncoder().encode(xmlDps).length,
+            conteudo: null,
           },
           {
             tenant_id: tenantId,
             nota_fiscal_id,
             tipo: "xml_nfse",
-            nome_arquivo: `nfse_${apiResponse.chaveAcesso}.xml`,
-            conteudo: apiResponse.xmlRetorno,
+            nome_arquivo: `nfse_${chaveNfse}.xml`,
+            storage_path: nfsePath,
+            hash: nfseHash,
+            tamanho_bytes: new TextEncoder().encode(apiResponse.xmlRetorno).length,
+            conteudo: null,
           },
         ]);
       }
