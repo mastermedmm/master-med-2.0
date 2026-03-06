@@ -257,8 +257,7 @@ export default function NfseNotasEmitidas() {
                     <TableHead className="text-right">ISS</TableHead>
                     <TableHead className="text-right">Valor Líquido</TableHead>
                     <TableHead>Data Emissão</TableHead>
-                  </TableRow>
-                </TableHeader>
+                    <TableHead className="w-[100px]">Ações</TableHead>
                 <TableBody>
                   {paginatedNotas.map(nota => {
                     const st = STATUS_MAP[nota.status] || { label: nota.status, variant: 'outline' as const };
