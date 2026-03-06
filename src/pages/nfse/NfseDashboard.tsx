@@ -9,10 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, LineChart, Line,
-  ResponsiveContainer
 } from 'recharts';
 import { 
-  FileText, AlertTriangle, XCircle, RefreshCw, ArrowLeftRight, AlertOctagon,
+  FileText, AlertTriangle, XCircle, ArrowLeftRight, AlertOctagon,
   TrendingUp, Building2, MapPin, Bell, Wifi, RotateCcw
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
@@ -78,13 +77,13 @@ export default function NfseDashboard() {
       const [emitidas, rejeitadas, canceladas, substituidas] = await Promise.all([
         supabase.from('notas_fiscais').select('id', { count: 'exact', head: true })
           .gte('data_emissao', todayStr).lte('data_emissao', todayStr)
-          .in('status', ['autorizada', 'enviado', 'fila_emissao']),
+          .in('status', ['autorizado', 'enviado', 'fila_emissao']),
         supabase.from('notas_fiscais').select('id', { count: 'exact', head: true })
-          .eq('status', 'rejeitada'),
+          .eq('status', 'rejeitado'),
         supabase.from('notas_fiscais').select('id', { count: 'exact', head: true })
-          .eq('status', 'cancelada'),
+          .eq('status', 'cancelado'),
         supabase.from('notas_fiscais').select('id', { count: 'exact', head: true })
-          .eq('status', 'substituida'),
+          .eq('status', 'substituido'),
       ]);
       return {
         emitidas: emitidas.count ?? 0,
@@ -104,7 +103,7 @@ export default function NfseDashboard() {
         .from('notas_fiscais')
         .select('data_emissao, id')
         .gte('data_emissao', last30)
-        .in('status', ['autorizada', 'enviado', 'fila_emissao', 'rejeitada']);
+        .in('status', ['autorizado', 'enviado', 'fila_emissao', 'rejeitado']);
 
       const grouped: Record<string, number> = {};
       (data ?? []).forEach(n => {
@@ -178,11 +177,11 @@ export default function NfseDashboard() {
     queryFn: async () => {
       const [rejeitadas, falhasIntegracao, errosSinc] = await Promise.all([
         supabase.from('notas_fiscais').select('id, numero_dps, tomador_nome, motivo_rejeicao')
-          .eq('status', 'rejeitada').order('updated_at', { ascending: false }).limit(5),
+          .eq('status', 'rejeitado').order('updated_at', { ascending: false }).limit(5),
         supabase.from('logs_integracao_nfse').select('id, operacao, erro_mensagem, created_at')
           .eq('sucesso', false).order('created_at', { ascending: false }).limit(5),
         supabase.from('jobs_sincronizacao_nfse').select('id, tipo, erro_ultima_tentativa, updated_at')
-          .eq('status', 'erro').order('updated_at', { ascending: false }).limit(5),
+          .eq('status', 'falha').order('updated_at', { ascending: false }).limit(5),
       ]);
       return {
         rejeitadas: rejeitadas.data ?? [],
