@@ -366,10 +366,14 @@ export default function NfseDocumentos() {
               <TablePagination
                 currentPage={pagination.currentPage}
                 totalPages={pagination.totalPages}
-                pageSize={pagination.pageSize}
-                totalItems={filteredDocs.length}
-                onPageChange={pagination.setCurrentPage}
-                onPageSizeChange={pagination.setPageSize}
+                totalItems={pagination.totalItems}
+                startIndex={pagination.startIndex}
+                endIndex={pagination.endIndex}
+                onPageChange={pagination.goToPage}
+                onNextPage={pagination.nextPage}
+                onPrevPage={pagination.prevPage}
+                onFirstPage={pagination.firstPage}
+                onLastPage={pagination.lastPage}
               />
             </>
           )}
