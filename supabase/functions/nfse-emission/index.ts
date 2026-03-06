@@ -656,11 +656,14 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: Dia
       const certAsn1 = forge.asn1.fromDer(certDer);
 
       const cert = forge.pki.certificateFromAsn1(certAsn1);
-      console.log(`[nfse-emission] Found certificate: ${cert.subject.getField("CN")?.value || "?"}`);
+      log.log(`Found certificate: CN=${cert.subject.getField("CN")?.value || "?"}, serial=${cert.serialNumber}, notAfter=${cert.validity.notAfter.toISOString()}`);
       return { cert };
+    } else {
+      log.warn(`Unknown cert type OID: ${certTypeOid}`);
     }
   }
 
+  log.log(`SafeBag OID ${bagId} not handled (not a key or cert bag)`);
   return {};
 }
 
