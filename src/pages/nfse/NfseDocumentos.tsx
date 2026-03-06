@@ -48,6 +48,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { TablePagination } from '@/components/ui/table-pagination';
 import { useTablePagination } from '@/hooks/useTablePagination';
+import { SearchableSelectWithId } from '@/components/ui/searchable-select-with-id';
 
 interface DocumentoNfse {
   id: string;
@@ -95,10 +96,19 @@ export default function NfseDocumentos() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [tipoFilter, setTipoFilter] = useState<string>('todos');
+  const [issuerFilter, setIssuerFilter] = useState<string>('');
+  const [issuers, setIssuers] = useState<{ id: string; name: string }[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewContent, setPreviewContent] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  // Load issuers for filter
+  useEffect(() => {
+    if (!tenant?.id) return;
+    supabase.from('issuers').select('id, name').eq('tenant_id', tenant.id).eq('active', true).order('name')
+      .then(({ data }) => setIssuers(data || []));
+  }, [tenant?.id]);
 
   const loadDocumentos = useCallback(async () => {
     if (!tenant?.id) return;
@@ -119,6 +129,10 @@ export default function NfseDocumentos() {
       query = query.eq('tipo', tipoFilter as any);
     }
 
+    if (issuerFilter) {
+      query = query.eq('issuer_id', issuerFilter);
+    }
+
     const { data, error } = await query;
 
     if (error) {
@@ -127,7 +141,7 @@ export default function NfseDocumentos() {
       setDocumentos((data as unknown as DocumentoNfse[]) || []);
     }
     setLoading(false);
-  }, [tenant?.id, tipoFilter, toast]);
+  }, [tenant?.id, tipoFilter, issuerFilter, toast]);
 
   useEffect(() => { loadDocumentos(); }, [loadDocumentos]);
 
@@ -247,7 +261,17 @@ export default function NfseDocumentos() {
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-9"
               />
-            </div>
+             </div>
+            <SearchableSelectWithId
+              options={issuers}
+              value={issuerFilter}
+              onValueChange={setIssuerFilter}
+              placeholder="Emitente"
+              searchPlaceholder="Buscar emitente..."
+              emptyMessage="Nenhum emitente."
+              allLabel="Todos emitentes"
+              className="w-[220px]"
+            />
             <Select value={tipoFilter} onValueChange={setTipoFilter}>
               <SelectTrigger className="w-[200px]">
                 <Filter className="h-4 w-4 mr-2" />
