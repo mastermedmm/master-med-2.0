@@ -663,7 +663,12 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: Dia
     log.log("Found CertBag - extracting certificate");
     const certBagWrapper = bagValues[1];
     let certBagAsn1: forge.asn1.Asn1;
-    if ((certBagWrapper as any).constructed && ((certBagWrapper as any).type === 0xa0)) {
+    const cType = (certBagWrapper as any).type;
+    const cTagClass = (certBagWrapper as any).tagClass;
+    const cConstructed = (certBagWrapper as any).constructed;
+    if (cConstructed && (cTagClass === 0x80 || cType === 0xa0 || (cTagClass === 0x80 && cType === 0x00))) {
+      certBagAsn1 = ((certBagWrapper as any).value as forge.asn1.Asn1[])[0];
+    } else if (cConstructed && Array.isArray((certBagWrapper as any).value) && ((certBagWrapper as any).value as any[]).length === 1) {
       certBagAsn1 = ((certBagWrapper as any).value as forge.asn1.Asn1[])[0];
     } else {
       certBagAsn1 = certBagWrapper;
