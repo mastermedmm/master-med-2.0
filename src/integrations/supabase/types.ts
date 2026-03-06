@@ -426,6 +426,189 @@ export type Database = {
           },
         ]
       }
+      documentos_nfse: {
+        Row: {
+          conteudo: string | null
+          created_at: string
+          hash: string | null
+          id: string
+          nome_arquivo: string
+          nota_fiscal_id: string
+          storage_path: string | null
+          tamanho_bytes: number | null
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["nfse_documento_tipo"]
+          url: string | null
+        }
+        Insert: {
+          conteudo?: string | null
+          created_at?: string
+          hash?: string | null
+          id?: string
+          nome_arquivo: string
+          nota_fiscal_id: string
+          storage_path?: string | null
+          tamanho_bytes?: number | null
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["nfse_documento_tipo"]
+          url?: string | null
+        }
+        Update: {
+          conteudo?: string | null
+          created_at?: string
+          hash?: string | null
+          id?: string
+          nome_arquivo?: string
+          nota_fiscal_id?: string
+          storage_path?: string | null
+          tamanho_bytes?: number | null
+          tenant_id?: string
+          tipo?: Database["public"]["Enums"]["nfse_documento_tipo"]
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_nfse_nota_fiscal_id_fkey"
+            columns: ["nota_fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "notas_fiscais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentos_nfse_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dps_enviadas: {
+        Row: {
+          codigo_retorno: string | null
+          created_at: string
+          enviado_em: string | null
+          id: string
+          mensagem_retorno: string | null
+          nota_fiscal_id: string
+          numero_lote: string | null
+          protocolo: string | null
+          retorno_em: string | null
+          status: string
+          tenant_id: string
+          tentativas: number
+          updated_at: string
+          xml_envio: string | null
+          xml_retorno: string | null
+        }
+        Insert: {
+          codigo_retorno?: string | null
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          mensagem_retorno?: string | null
+          nota_fiscal_id: string
+          numero_lote?: string | null
+          protocolo?: string | null
+          retorno_em?: string | null
+          status?: string
+          tenant_id: string
+          tentativas?: number
+          updated_at?: string
+          xml_envio?: string | null
+          xml_retorno?: string | null
+        }
+        Update: {
+          codigo_retorno?: string | null
+          created_at?: string
+          enviado_em?: string | null
+          id?: string
+          mensagem_retorno?: string | null
+          nota_fiscal_id?: string
+          numero_lote?: string | null
+          protocolo?: string | null
+          retorno_em?: string | null
+          status?: string
+          tenant_id?: string
+          tentativas?: number
+          updated_at?: string
+          xml_envio?: string | null
+          xml_retorno?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dps_enviadas_nota_fiscal_id_fkey"
+            columns: ["nota_fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "notas_fiscais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dps_enviadas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eventos_nfse: {
+        Row: {
+          codigo_retorno: string | null
+          created_at: string
+          dados: Json | null
+          descricao: string | null
+          id: string
+          mensagem: string | null
+          nota_fiscal_id: string
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["nfse_evento_tipo"]
+          usuario_id: string | null
+          usuario_nome: string | null
+        }
+        Insert: {
+          codigo_retorno?: string | null
+          created_at?: string
+          dados?: Json | null
+          descricao?: string | null
+          id?: string
+          mensagem?: string | null
+          nota_fiscal_id: string
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["nfse_evento_tipo"]
+          usuario_id?: string | null
+          usuario_nome?: string | null
+        }
+        Update: {
+          codigo_retorno?: string | null
+          created_at?: string
+          dados?: Json | null
+          descricao?: string | null
+          id?: string
+          mensagem?: string | null
+          nota_fiscal_id?: string
+          tenant_id?: string
+          tipo?: Database["public"]["Enums"]["nfse_evento_tipo"]
+          usuario_id?: string | null
+          usuario_nome?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_nfse_nota_fiscal_id_fkey"
+            columns: ["nota_fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "notas_fiscais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_nfse_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_categories: {
         Row: {
           active: boolean
@@ -1073,6 +1256,78 @@ export type Database = {
           },
         ]
       }
+      jobs_sincronizacao_nfse: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dados: Json | null
+          erro_ultima_tentativa: string | null
+          finalizado_em: string | null
+          id: string
+          iniciado_em: string | null
+          max_tentativas: number
+          nota_fiscal_id: string | null
+          prioridade: number
+          proximo_retry_em: string | null
+          status: Database["public"]["Enums"]["nfse_job_status"]
+          tenant_id: string
+          tentativas: number
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dados?: Json | null
+          erro_ultima_tentativa?: string | null
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string | null
+          max_tentativas?: number
+          nota_fiscal_id?: string | null
+          prioridade?: number
+          proximo_retry_em?: string | null
+          status?: Database["public"]["Enums"]["nfse_job_status"]
+          tenant_id: string
+          tentativas?: number
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dados?: Json | null
+          erro_ultima_tentativa?: string | null
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string | null
+          max_tentativas?: number
+          nota_fiscal_id?: string | null
+          prioridade?: number
+          proximo_retry_em?: string | null
+          status?: Database["public"]["Enums"]["nfse_job_status"]
+          tenant_id?: string
+          tentativas?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_sincronizacao_nfse_nota_fiscal_id_fkey"
+            columns: ["nota_fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "notas_fiscais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_sincronizacao_nfse_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       licensee_sessions: {
         Row: {
           created_at: string
@@ -1158,6 +1413,66 @@ export type Database = {
           },
         ]
       }
+      logs_integracao_nfse: {
+        Row: {
+          created_at: string
+          duracao_ms: number | null
+          endpoint: string | null
+          erro_mensagem: string | null
+          http_status: number | null
+          id: string
+          nota_fiscal_id: string | null
+          operacao: string
+          request_payload: string | null
+          response_payload: string | null
+          sucesso: boolean
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          duracao_ms?: number | null
+          endpoint?: string | null
+          erro_mensagem?: string | null
+          http_status?: number | null
+          id?: string
+          nota_fiscal_id?: string | null
+          operacao: string
+          request_payload?: string | null
+          response_payload?: string | null
+          sucesso?: boolean
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          duracao_ms?: number | null
+          endpoint?: string | null
+          erro_mensagem?: string | null
+          http_status?: number | null
+          id?: string
+          nota_fiscal_id?: string | null
+          operacao?: string
+          request_payload?: string | null
+          response_payload?: string | null
+          sucesso?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logs_integracao_nfse_nota_fiscal_id_fkey"
+            columns: ["nota_fiscal_id"]
+            isOneToOne: false
+            referencedRelation: "notas_fiscais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logs_integracao_nfse_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       module_permissions: {
         Row: {
           can_create: boolean
@@ -1204,6 +1519,136 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notas_fiscais: {
+        Row: {
+          aliquota_iss: number
+          chave_acesso: string | null
+          codigo_cnae: string | null
+          codigo_servico: string | null
+          created_at: string
+          created_by: string | null
+          data_autorizacao: string | null
+          data_emissao: string | null
+          descricao_servico: string | null
+          id: string
+          iss_retido: boolean
+          motivo_rejeicao: string | null
+          municipio_codigo: string | null
+          municipio_nome: string | null
+          nfse_substituida_id: string | null
+          numero_dps: string | null
+          numero_nfse: string | null
+          status: Database["public"]["Enums"]["nfse_status"]
+          tenant_id: string
+          tomador_documento: string | null
+          tomador_id: string | null
+          tomador_nome: string | null
+          updated_at: string
+          valor_cofins: number
+          valor_csll: number
+          valor_deducoes: number
+          valor_inss: number
+          valor_ir: number
+          valor_iss: number
+          valor_liquido: number
+          valor_pis: number
+          valor_servico: number
+          xml_nfse: string | null
+        }
+        Insert: {
+          aliquota_iss?: number
+          chave_acesso?: string | null
+          codigo_cnae?: string | null
+          codigo_servico?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_autorizacao?: string | null
+          data_emissao?: string | null
+          descricao_servico?: string | null
+          id?: string
+          iss_retido?: boolean
+          motivo_rejeicao?: string | null
+          municipio_codigo?: string | null
+          municipio_nome?: string | null
+          nfse_substituida_id?: string | null
+          numero_dps?: string | null
+          numero_nfse?: string | null
+          status?: Database["public"]["Enums"]["nfse_status"]
+          tenant_id: string
+          tomador_documento?: string | null
+          tomador_id?: string | null
+          tomador_nome?: string | null
+          updated_at?: string
+          valor_cofins?: number
+          valor_csll?: number
+          valor_deducoes?: number
+          valor_inss?: number
+          valor_ir?: number
+          valor_iss?: number
+          valor_liquido?: number
+          valor_pis?: number
+          valor_servico?: number
+          xml_nfse?: string | null
+        }
+        Update: {
+          aliquota_iss?: number
+          chave_acesso?: string | null
+          codigo_cnae?: string | null
+          codigo_servico?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_autorizacao?: string | null
+          data_emissao?: string | null
+          descricao_servico?: string | null
+          id?: string
+          iss_retido?: boolean
+          motivo_rejeicao?: string | null
+          municipio_codigo?: string | null
+          municipio_nome?: string | null
+          nfse_substituida_id?: string | null
+          numero_dps?: string | null
+          numero_nfse?: string | null
+          status?: Database["public"]["Enums"]["nfse_status"]
+          tenant_id?: string
+          tomador_documento?: string | null
+          tomador_id?: string | null
+          tomador_nome?: string | null
+          updated_at?: string
+          valor_cofins?: number
+          valor_csll?: number
+          valor_deducoes?: number
+          valor_inss?: number
+          valor_ir?: number
+          valor_iss?: number
+          valor_liquido?: number
+          valor_pis?: number
+          valor_servico?: number
+          xml_nfse?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_fiscais_nfse_substituida_id_fkey"
+            columns: ["nfse_substituida_id"]
+            isOneToOne: false
+            referencedRelation: "notas_fiscais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_fiscais_tomador_id_fkey"
+            columns: ["tomador_id"]
+            isOneToOne: false
+            referencedRelation: "hospitals"
             referencedColumns: ["id"]
           },
         ]
@@ -1832,6 +2277,37 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "operador" | "financeiro"
+      nfse_documento_tipo:
+        | "xml_nfse"
+        | "xml_dps"
+        | "xml_evento"
+        | "pdf_nfse"
+        | "pdf_danfse"
+      nfse_evento_tipo:
+        | "emissao"
+        | "autorizacao"
+        | "rejeicao"
+        | "cancelamento"
+        | "substituicao"
+        | "consulta"
+        | "reprocessamento"
+        | "envio_dps"
+        | "retorno_prefeitura"
+      nfse_job_status:
+        | "pendente"
+        | "executando"
+        | "concluido"
+        | "falha"
+        | "cancelado"
+      nfse_status:
+        | "rascunho"
+        | "fila_emissao"
+        | "enviado"
+        | "autorizado"
+        | "rejeitado"
+        | "cancelado"
+        | "substituido"
+        | "divergente"
       payment_status:
         | "aguardando_recebimento"
         | "pendente"
@@ -1971,6 +2447,41 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "operador", "financeiro"],
+      nfse_documento_tipo: [
+        "xml_nfse",
+        "xml_dps",
+        "xml_evento",
+        "pdf_nfse",
+        "pdf_danfse",
+      ],
+      nfse_evento_tipo: [
+        "emissao",
+        "autorizacao",
+        "rejeicao",
+        "cancelamento",
+        "substituicao",
+        "consulta",
+        "reprocessamento",
+        "envio_dps",
+        "retorno_prefeitura",
+      ],
+      nfse_job_status: [
+        "pendente",
+        "executando",
+        "concluido",
+        "falha",
+        "cancelado",
+      ],
+      nfse_status: [
+        "rascunho",
+        "fila_emissao",
+        "enviado",
+        "autorizado",
+        "rejeitado",
+        "cancelado",
+        "substituido",
+        "divergente",
+      ],
       payment_status: [
         "aguardando_recebimento",
         "pendente",
