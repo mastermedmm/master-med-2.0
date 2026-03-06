@@ -114,6 +114,86 @@ function forgeStringToBytes(str: string): Uint8Array {
   return bytes;
 }
 
+// Safe OID extraction from ASN1 node - fixes "getByte is not a function"
+function safeGetOid(asn1Node: any): string {
+  try {
+    if (typeof asn1Node.value === "string") {
+      return forge.asn1.derToOid(forge.util.createBuffer(asn1Node.value));
+    }
+    return forge.asn1.derToOid(asn1Node);
+  } catch (e) {
+    // Try raw bytes approach
+    try {
+      const raw = asn1Node.value || asn1Node;
+      if (typeof raw === "string") {
+        return forge.asn1.derToOid(forge.util.createBuffer(raw));
+      }
+    } catch {}
+    throw new Error(`Cannot extract OID from ASN1 node (type=${asn1Node?.type}, tagClass=${asn1Node?.tagClass}): ${(e as Error).message}`);
+  }
+}
+
+// Diagnostic logger that collects messages for later persistence
+class DiagnosticLogger {
+  private logs: string[] = [];
+  
+  log(msg: string) {
+    const entry = `[${new Date().toISOString()}] ${msg}`;
+    this.logs.push(entry);
+    console.log(`[nfse-emission] ${msg}`);
+  }
+  
+  error(msg: string, err?: unknown) {
+    const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err || "");
+    const entry = `[${new Date().toISOString()}] ERROR: ${msg} ${errMsg}`;
+    this.logs.push(entry);
+    console.error(`[nfse-emission] ${msg}`, err);
+  }
+  
+  warn(msg: string) {
+    const entry = `[${new Date().toISOString()}] WARN: ${msg}`;
+    this.logs.push(entry);
+    console.warn(`[nfse-emission] ${msg}`);
+  }
+  
+  getFullLog(): string {
+    return this.logs.join("\n");
+  }
+  
+  getLogEntries(): string[] {
+    return [...this.logs];
+  }
+}
+
+function describeAsn1Node(node: any, depth = 0): string {
+  if (!node || depth > 3) return "null";
+  const indent = "  ".repeat(depth);
+  const type = node.type !== undefined ? `0x${node.type.toString(16)}` : "?";
+  const tagClass = node.tagClass !== undefined ? `0x${node.tagClass.toString(16)}` : "?";
+  const constructed = node.constructed ? "CONSTRUCTED" : "PRIMITIVE";
+  const valueType = typeof node.value;
+  let info = `${indent}[type=${type}, tagClass=${tagClass}, ${constructed}, valueType=${valueType}`;
+  
+  if (valueType === "string") {
+    info += `, len=${node.value.length}`;
+    // Try to extract OID if it looks like one
+    if (node.type === 0x06) {
+      try { info += `, oid=${safeGetOid(node)}`; } catch {}
+    }
+  } else if (Array.isArray(node.value)) {
+    info += `, children=${node.value.length}`;
+  }
+  info += "]";
+  
+  if (Array.isArray(node.value) && depth < 3) {
+    for (let i = 0; i < Math.min(node.value.length, 5); i++) {
+      info += "\n" + describeAsn1Node(node.value[i], depth + 1);
+    }
+    if (node.value.length > 5) info += `\n${indent}  ... (${node.value.length - 5} more)`;
+  }
+  return info;
+}
+
 // ==================== PBES2 Decryption with Web Crypto ====================
 
 async function decryptPBES2(
