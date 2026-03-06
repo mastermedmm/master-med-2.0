@@ -1,6 +1,35 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import forge from "npm:node-forge@1.3.1";
 
+// ==================== Monkey-patch forge for Deno compatibility ====================
+// In Deno's runtime, forge.asn1.derToInteger receives a raw string instead of
+// a ByteStringBuffer, causing "bytes.length is not a function" errors.
+// This breaks forge's internal PKCS#12 parsing (wrong iteration count → wrong key → "wrong password").
+const _origDerToInteger = forge.asn1.derToInteger;
+(forge.asn1 as any).derToInteger = function(bytes: any): number {
+  try {
+    // Try original first
+    return _origDerToInteger.call(forge.asn1, bytes);
+  } catch {
+    // Fallback: handle raw string (Deno edge case)
+    let str: string;
+    if (typeof bytes === 'string') {
+      str = bytes;
+    } else if (bytes && typeof bytes.getBytes === 'function') {
+      str = bytes.getBytes();
+    } else if (bytes && typeof bytes.data === 'string') {
+      str = bytes.data.substring(bytes.read || 0);
+    } else {
+      str = String(bytes);
+    }
+    let result = 0;
+    for (let i = 0; i < str.length; i++) {
+      result = (result << 8) | str.charCodeAt(i);
+    }
+    return result;
+  }
+};
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
