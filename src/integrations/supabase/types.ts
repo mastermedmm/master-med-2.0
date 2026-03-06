@@ -289,6 +289,74 @@ export type Database = {
           },
         ]
       }
+      configuracoes_nfse: {
+        Row: {
+          ambiente: string
+          certificado_base64: string | null
+          certificado_nome: string | null
+          certificado_senha: string | null
+          certificado_validade: string | null
+          created_at: string
+          endpoint_api: string | null
+          id: string
+          inscricao_municipal: string | null
+          municipio_codigo: string | null
+          municipio_nome: string | null
+          municipio_uf: string | null
+          prestador_cnpj: string | null
+          prestador_razao_social: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ambiente?: string
+          certificado_base64?: string | null
+          certificado_nome?: string | null
+          certificado_senha?: string | null
+          certificado_validade?: string | null
+          created_at?: string
+          endpoint_api?: string | null
+          id?: string
+          inscricao_municipal?: string | null
+          municipio_codigo?: string | null
+          municipio_nome?: string | null
+          municipio_uf?: string | null
+          prestador_cnpj?: string | null
+          prestador_razao_social?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ambiente?: string
+          certificado_base64?: string | null
+          certificado_nome?: string | null
+          certificado_senha?: string | null
+          certificado_validade?: string | null
+          created_at?: string
+          endpoint_api?: string | null
+          id?: string
+          inscricao_municipal?: string | null
+          municipio_codigo?: string | null
+          municipio_nome?: string | null
+          municipio_uf?: string | null
+          prestador_cnpj?: string | null
+          prestador_razao_social?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracoes_nfse_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_sessions: {
         Row: {
           created_at: string
