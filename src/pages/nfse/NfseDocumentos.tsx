@@ -19,7 +19,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -114,7 +114,7 @@ export default function NfseDocumentos() {
       .order('created_at', { ascending: false });
 
     if (tipoFilter !== 'todos') {
-      query = query.eq('tipo', tipoFilter);
+      query = query.eq('tipo', tipoFilter as any);
     }
 
     const { data, error } = await query;
@@ -141,11 +141,8 @@ export default function NfseDocumentos() {
     );
   });
 
-  const pagination = useTablePagination({ totalItems: filteredDocs.length });
-  const paginatedDocs = filteredDocs.slice(
-    (pagination.currentPage - 1) * pagination.pageSize,
-    pagination.currentPage * pagination.pageSize
-  );
+  const pagination = useTablePagination(filteredDocs);
+  const paginatedDocs = pagination.paginatedData as unknown as DocumentoNfse[];
 
   const handleDownload = async (doc: DocumentoNfse) => {
     try {
