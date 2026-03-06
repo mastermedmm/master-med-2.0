@@ -37,6 +37,7 @@ export const ROUTES = {
     sincronizacao: '/nfse/sincronizacao',
     documentos: '/nfse/documentos',
     configuracoes: '/nfse/configuracoes',
+    tomadores: '/nfse/tomadores',
   },
   
   // Portal do Médico

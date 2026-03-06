@@ -21,6 +21,7 @@ import {
   Cloud,
   History,
   Handshake,
+  Contact,
   FilePlus,
   FileCheck,
   AlertTriangle,
@@ -79,6 +80,7 @@ export const nfseNav: AppNavItem[] = [
   { label: "Sincronização", to: ROUTES.nfse.sincronizacao, icon: RefreshCw, module: "nfse.sincronizacao" },
   { label: "Documentos XML/PDF", to: ROUTES.nfse.documentos, icon: FolderDown, module: "nfse.documentos" },
   { label: "Configurações", to: ROUTES.nfse.configuracoes, icon: Cog, module: "nfse.configuracoes" },
+  { label: "Tomadores", to: ROUTES.nfse.tomadores, icon: Contact, module: "nfse.emitir" },
 ];
 
 export const topNav: AppNavItem[] = [...primaryNav, ...financialNav, ...registrationNav, ...adminNav, ...nfseNav];

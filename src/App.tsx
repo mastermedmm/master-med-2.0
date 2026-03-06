@@ -50,6 +50,7 @@ import NfseEventos from "./pages/nfse/NfseEventos";
 import NfseSincronizacao from "./pages/nfse/NfseSincronizacao";
 import NfseDocumentos from "./pages/nfse/NfseDocumentos";
 import NfseConfiguracoes from "./pages/nfse/NfseConfiguracoes";
+import NfseTomadores from "./pages/nfse/NfseTomadores";
 
 // Doctor Portal Pages
 import DoctorLogin from "./pages/doctor-portal/DoctorLogin";
@@ -302,6 +303,7 @@ function AppRoutes() {
       <Route path={ROUTES.nfse.sincronizacao} element={<ProtectedRoute><NfseSincronizacao /></ProtectedRoute>} />
       <Route path={ROUTES.nfse.documentos} element={<ProtectedRoute><NfseDocumentos /></ProtectedRoute>} />
       <Route path={ROUTES.nfse.configuracoes} element={<ProtectedRoute><NfseConfiguracoes /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.tomadores} element={<ProtectedRoute><NfseTomadores /></ProtectedRoute>} />
       {/* Doctor Portal Routes - Portuguese URLs */}
       <Route path={ROUTES.doctorPortal.login} element={<DoctorLogin />} />
       <Route path={ROUTES.doctorPortal.changePassword} element={<DoctorChangePassword />} />
