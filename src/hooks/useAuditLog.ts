@@ -141,6 +141,13 @@ export const TABLE_LABELS: Record<string, string> = {
   invoice_receipts: 'Recebimentos',
   payments: 'Pagamentos',
   system_settings: 'Configurações',
+  notas_fiscais: 'NFS-e',
+  documentos_nfse: 'Documentos NFS-e',
+  eventos_nfse: 'Eventos NFS-e',
+  dps_enviadas: 'DPS Enviadas',
+  tomadores_nfse: 'Tomadores NFS-e',
+  jobs_sincronizacao_nfse: 'Jobs Sincronização NFS-e',
+  logs_integracao_nfse: 'Logs Integração NFS-e',
 };
 
 // Action translations for display
@@ -148,6 +155,13 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   INSERT: 'Criou',
   UPDATE: 'Editou',
   DELETE: 'Excluiu',
+  NFSE_CRIACAO: 'Criou NFS-e',
+  NFSE_EMISSAO: 'Emitiu NFS-e',
+  NFSE_REJEICAO: 'Rejeitou NFS-e',
+  NFSE_CANCELAMENTO: 'Cancelou NFS-e',
+  NFSE_SUBSTITUICAO: 'Substituiu NFS-e',
+  NFSE_DOWNLOAD: 'Baixou documento',
+  NFSE_REPROCESSAMENTO: 'Reprocessou NFS-e',
 };
 
 // Action colors for badges
@@ -155,6 +169,13 @@ export const ACTION_COLORS: Record<AuditAction, string> = {
   INSERT: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   UPDATE: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   DELETE: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  NFSE_CRIACAO: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  NFSE_EMISSAO: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  NFSE_REJEICAO: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  NFSE_CANCELAMENTO: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  NFSE_SUBSTITUICAO: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  NFSE_DOWNLOAD: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+  NFSE_REPROCESSAMENTO: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
 };
 
 // Field name translations for display
