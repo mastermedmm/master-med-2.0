@@ -114,25 +114,110 @@ function forgeStringToBytes(str: string): Uint8Array {
   return bytes;
 }
 
+// Safe OID extraction from ASN1 node - fixes "getByte is not a function"
+function safeGetOid(asn1Node: any): string {
+  try {
+    if (typeof asn1Node.value === "string") {
+      return forge.asn1.derToOid(forge.util.createBuffer(asn1Node.value));
+    }
+    return forge.asn1.derToOid(asn1Node);
+  } catch (e) {
+    // Try raw bytes approach
+    try {
+      const raw = asn1Node.value || asn1Node;
+      if (typeof raw === "string") {
+        return forge.asn1.derToOid(forge.util.createBuffer(raw));
+      }
+    } catch {}
+    throw new Error(`Cannot extract OID from ASN1 node (type=${asn1Node?.type}, tagClass=${asn1Node?.tagClass}): ${(e as Error).message}`);
+  }
+}
+
+// Diagnostic logger that collects messages for later persistence
+class DiagnosticLogger {
+  private logs: string[] = [];
+  
+  log(msg: string) {
+    const entry = `[${new Date().toISOString()}] ${msg}`;
+    this.logs.push(entry);
+    console.log(`[nfse-emission] ${msg}`);
+  }
+  
+  error(msg: string, err?: unknown) {
+    const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err || "");
+    const entry = `[${new Date().toISOString()}] ERROR: ${msg} ${errMsg}`;
+    this.logs.push(entry);
+    console.error(`[nfse-emission] ${msg}`, err);
+  }
+  
+  warn(msg: string) {
+    const entry = `[${new Date().toISOString()}] WARN: ${msg}`;
+    this.logs.push(entry);
+    console.warn(`[nfse-emission] ${msg}`);
+  }
+  
+  getFullLog(): string {
+    return this.logs.join("\n");
+  }
+  
+  getLogEntries(): string[] {
+    return [...this.logs];
+  }
+}
+
+function describeAsn1Node(node: any, depth = 0): string {
+  if (!node || depth > 3) return "null";
+  const indent = "  ".repeat(depth);
+  const type = node.type !== undefined ? `0x${node.type.toString(16)}` : "?";
+  const tagClass = node.tagClass !== undefined ? `0x${node.tagClass.toString(16)}` : "?";
+  const constructed = node.constructed ? "CONSTRUCTED" : "PRIMITIVE";
+  const valueType = typeof node.value;
+  let info = `${indent}[type=${type}, tagClass=${tagClass}, ${constructed}, valueType=${valueType}`;
+  
+  if (valueType === "string") {
+    info += `, len=${node.value.length}`;
+    // Try to extract OID if it looks like one
+    if (node.type === 0x06) {
+      try { info += `, oid=${safeGetOid(node)}`; } catch {}
+    }
+  } else if (Array.isArray(node.value)) {
+    info += `, children=${node.value.length}`;
+  }
+  info += "]";
+  
+  if (Array.isArray(node.value) && depth < 3) {
+    for (let i = 0; i < Math.min(node.value.length, 5); i++) {
+      info += "\n" + describeAsn1Node(node.value[i], depth + 1);
+    }
+    if (node.value.length > 5) info += `\n${indent}  ... (${node.value.length - 5} more)`;
+  }
+  return info;
+}
+
 // ==================== PBES2 Decryption with Web Crypto ====================
 
 async function decryptPBES2(
   encryptedData: Uint8Array,
   algorithmAsn1: forge.asn1.Asn1,
-  password: string
+  password: string,
+  diag?: DiagnosticLogger
 ): Promise<Uint8Array> {
+  const log = diag || new DiagnosticLogger();
+  
   // Parse PBES2 params
   const params = algorithmAsn1.value as forge.asn1.Asn1[];
   const kdfAsn1 = params[0]; // keyDerivationFunc
   const encSchemeAsn1 = params[1]; // encryptionScheme
 
+  log.log(`PBES2 structure: kdf=${describeAsn1Node(kdfAsn1, 0).substring(0, 200)}`);
+  log.log(`PBES2 structure: encScheme=${describeAsn1Node(encSchemeAsn1, 0).substring(0, 200)}`);
+
   // Parse KDF (PBKDF2)
-  const kdfParams = (kdfAsn1 as any).value as forge.asn1.Asn1[];
-  const salt = forgeStringToBytes(forge.asn1.derToOid(kdfParams[0] as any) ? "" : ((kdfParams[0] as any).value as string));
+  const kdfValues = (kdfAsn1 as any).value as forge.asn1.Asn1[];
+  const kdfOid = safeGetOid(kdfValues[0]);
+  log.log(`KDF OID: ${kdfOid}`);
   
-  // Actually re-parse properly
-  const kdfOidAsn1 = (kdfAsn1 as any).value[0];
-  const kdfParamsAsn1 = (kdfAsn1 as any).value[1];
+  const kdfParamsAsn1 = kdfValues[1];
   const kdfParamsValues = (kdfParamsAsn1 as any).value as forge.asn1.Asn1[];
   
   const saltBytes = forgeStringToBytes((kdfParamsValues[0] as any).value as string);
@@ -145,19 +230,23 @@ async function decryptPBES2(
     const param = kdfParamsValues[i] as any;
     if (param.type === forge.asn1.Type.INTEGER) {
       keyLength = forge.asn1.derToInteger(param);
+      log.log(`KDF explicit keyLength: ${keyLength}`);
     } else if (param.type === forge.asn1.Type.SEQUENCE) {
-      const prfOid = forge.asn1.derToOid((param.value as any[])[0]);
+      const prfOid = safeGetOid((param.value as any[])[0]);
+      log.log(`PRF OID: ${prfOid}`);
       if (prfOid === "1.2.840.113549.2.9") prfHash = "SHA-256";
       else if (prfOid === "1.2.840.113549.2.7") prfHash = "SHA-1";
       else if (prfOid === "1.2.840.113549.2.10") prfHash = "SHA-384";
       else if (prfOid === "1.2.840.113549.2.11") prfHash = "SHA-512";
+      else log.warn(`Unknown PRF OID: ${prfOid}`);
     }
   }
 
   // Parse encryption scheme
   const encSchemeValues = (encSchemeAsn1 as any).value as forge.asn1.Asn1[];
-  const encOid = forge.asn1.derToOid(encSchemeValues[0]);
+  const encOid = safeGetOid(encSchemeValues[0]);
   const iv = forgeStringToBytes((encSchemeValues[1] as any).value as string);
+  log.log(`Encryption OID: ${encOid}`);
 
   // Determine algorithm
   let algorithm: string;
@@ -170,7 +259,7 @@ async function decryptPBES2(
   }
   if (keyLength > 0) aesKeyLen = keyLength;
 
-  console.log(`[nfse-emission] PBES2: ${algorithm} keyLen=${aesKeyLen}, PRF=${prfHash}, iterations=${iterations}, salt=${saltBytes.length}b, iv=${iv.length}b`);
+  log.log(`PBES2 decrypt: ${algorithm} keyLen=${aesKeyLen}, PRF=${prfHash}, iterations=${iterations}, salt=${saltBytes.length}b, iv=${iv.length}b, data=${encryptedData.length}b`);
 
   // Derive key with PBKDF2
   const passwordBytes = new TextEncoder().encode(password);
@@ -185,6 +274,7 @@ async function decryptPBES2(
 
   // Decrypt
   const decrypted = await crypto.subtle.decrypt({ name: algorithm, iv }, derivedKey, encryptedData);
+  log.log(`PBES2 decrypted successfully: ${decrypted.byteLength} bytes`);
   return new Uint8Array(decrypted);
 }
 
@@ -193,23 +283,30 @@ async function decryptPBES2(
 async function decryptPBEData(
   encryptedData: Uint8Array,
   algorithmSeq: forge.asn1.Asn1,
-  password: string
+  password: string,
+  diag?: DiagnosticLogger
 ): Promise<Uint8Array> {
+  const log = diag || new DiagnosticLogger();
   const algValues = (algorithmSeq as any).value as forge.asn1.Asn1[];
-  const oid = forge.asn1.derToOid(algValues[0]);
+  const oid = safeGetOid(algValues[0]);
+  log.log(`PBE algorithm OID: ${oid}`);
 
   // PBES2
   if (oid === "1.2.840.113549.1.5.13") {
-    return decryptPBES2(encryptedData, algValues[1], password);
+    log.log("Using PBES2 (modern) decryption");
+    return decryptPBES2(encryptedData, algValues[1], password, diag);
   }
 
   // PBE-SHA1-3DES (1.2.840.113549.1.12.1.3) - let forge handle it
   // PBE-SHA1-RC2-40 (1.2.840.113549.1.12.1.6) - let forge handle it
   if (oid === "1.2.840.113549.1.12.1.3" || oid === "1.2.840.113549.1.12.1.6") {
+    const algoName = oid === "1.2.840.113549.1.12.1.3" ? "PBE-SHA1-3DES" : "PBE-SHA1-RC2-40";
+    log.log(`Using legacy ${algoName} decryption`);
     const params = (algValues[1] as any).value as forge.asn1.Asn1[];
     const salt = forgeStringToBytes((params[0] as any).value as string);
     const iterations = forge.asn1.derToInteger(params[1]);
     const pwdBytes = passwordToBMPBytes(password);
+    log.log(`${algoName}: iterations=${iterations}, salt=${salt.length}b`);
 
     if (oid === "1.2.840.113549.1.12.1.3") {
       // 3-key 3DES-CBC
@@ -220,7 +317,9 @@ async function decryptPBEData(
       cipher.start({ iv: forge.util.createBuffer(iv) });
       cipher.update(forge.util.createBuffer(encryptedData));
       cipher.finish();
-      return forgeStringToBytes(cipher.output.getBytes());
+      const result = forgeStringToBytes(cipher.output.getBytes());
+      log.log(`3DES decrypted: ${result.length} bytes`);
+      return result;
     } else {
       // RC2-40-CBC
       const key = await pkcs12KDF("SHA-1", pwdBytes, salt, iterations, 1, 5);
@@ -230,24 +329,63 @@ async function decryptPBEData(
       cipher.start({ iv: forge.util.createBuffer(iv) });
       cipher.update(forge.util.createBuffer(encryptedData));
       cipher.finish();
-      return forgeStringToBytes(cipher.output.getBytes());
+      const result = forgeStringToBytes(cipher.output.getBytes());
+      log.log(`RC2 decrypted: ${result.length} bytes`);
+      return result;
     }
   }
 
-  throw new Error(`Algoritmo PBE não suportado: OID ${oid}`);
+  throw new Error(`Algoritmo PBE não suportado: OID ${oid}. Estrutura ASN1: ${describeAsn1Node(algorithmSeq, 0).substring(0, 500)}`);
 }
 
 // ==================== Custom PKCS#12 Parser ====================
 
+// Global diagnostic logger for current request
+let _currentDiag: DiagnosticLogger | null = null;
+
+function getDiag(): DiagnosticLogger {
+  if (!_currentDiag) _currentDiag = new DiagnosticLogger();
+  return _currentDiag;
+}
+
 async function parsePfxCertificate(pfxBase64: string, password: string): Promise<CertificateData> {
-  console.log(`[nfse-emission] Parsing PFX (base64 len: ${pfxBase64.length}, pwd len: ${password.length})`);
+  const diag = getDiag();
+  diag.log(`Parsing PFX (base64 len: ${pfxBase64.length}, pwd len: ${password.length})`);
+  
+  // Decode and inspect top-level ASN1 structure
+  try {
+    const pfxDer = forge.util.decode64(pfxBase64);
+    const pfxAsn1 = forge.asn1.fromDer(pfxDer);
+    diag.log(`PFX ASN1 top-level: ${describeAsn1Node(pfxAsn1, 0).substring(0, 300)}`);
+    
+    // Check PFX version
+    const pfxSeq = (pfxAsn1 as any).value as forge.asn1.Asn1[];
+    if (pfxSeq[0]) {
+      try {
+        const version = forge.asn1.derToInteger(pfxSeq[0]);
+        diag.log(`PFX version: ${version}`);
+      } catch {}
+    }
+    
+    // Inspect macData if present
+    if (pfxSeq[2]) {
+      diag.log(`PFX has macData: ${describeAsn1Node(pfxSeq[2], 0).substring(0, 200)}`);
+    }
+  } catch (inspectErr) {
+    diag.warn(`PFX inspection failed: ${(inspectErr as Error).message}`);
+  }
 
   // First try standard forge parsing (works for 3DES-encrypted PFX)
   try {
-    return await parsePfxWithForge(pfxBase64, password);
+    const result = await parsePfxWithForge(pfxBase64, password);
+    diag.log("Forge standard parsing SUCCEEDED");
+    return result;
   } catch (forgeError) {
-    console.log(`[nfse-emission] Forge standard failed: ${(forgeError as Error).message}`);
-    console.log("[nfse-emission] Trying custom ASN1 parser for AES-encrypted PFX...");
+    diag.log(`Forge standard failed: ${(forgeError as Error).message}`);
+    if ((forgeError as Error).stack) {
+      diag.log(`Forge stack: ${(forgeError as Error).stack!.split("\n").slice(0, 3).join(" | ")}`);
+    }
+    diag.log("Trying custom ASN1 parser for AES-encrypted PFX...");
   }
 
   // Custom parser for AES-encrypted PKCS#12
@@ -279,6 +417,7 @@ async function parsePfxWithForge(pfxBase64: string, password: string): Promise<C
 }
 
 async function parsePfxCustom(pfxBase64: string, password: string): Promise<CertificateData> {
+  const diag = getDiag();
   const pfxDer = forge.util.decode64(pfxBase64);
   const pfxAsn1 = forge.asn1.fromDer(pfxDer);
   const pfxSeq = (pfxAsn1 as any).value as forge.asn1.Asn1[];
@@ -305,18 +444,29 @@ async function parsePfxCustom(pfxBase64: string, password: string): Promise<Cert
   }
 
   const safeContents = (authSafeData as any).value as forge.asn1.Asn1[];
-  console.log(`[nfse-emission] Found ${safeContents.length} SafeContents`);
+  diag.log(`Found ${safeContents.length} SafeContents`);
 
   let privateKeyCrypto: CryptoKey | null = null;
   let privateKeyPem = "";
   let certificate: forge.pki.Certificate | null = null;
 
-  for (const safeContent of safeContents) {
+  for (let scIdx = 0; scIdx < safeContents.length; scIdx++) {
+    const safeContent = safeContents[scIdx];
     const contentInfo = (safeContent as any).value as forge.asn1.Asn1[];
-    const contentTypeOid = forge.asn1.derToOid(contentInfo[0]);
+    
+    let contentTypeOid: string;
+    try {
+      contentTypeOid = safeGetOid(contentInfo[0]);
+    } catch (oidErr) {
+      diag.error(`SafeContent[${scIdx}] OID extraction failed`, oidErr);
+      diag.log(`SafeContent[${scIdx}] first child: ${describeAsn1Node(contentInfo[0], 0)}`);
+      continue;
+    }
+    diag.log(`SafeContent[${scIdx}] type OID: ${contentTypeOid}`);
 
     if (contentTypeOid === "1.2.840.113549.1.7.1") {
       // data - unencrypted SafeContents
+      diag.log(`SafeContent[${scIdx}]: unencrypted data`);
       const dataWrapper = contentInfo[1];
       let dataOctet: forge.asn1.Asn1;
       if ((dataWrapper as any).constructed) {
@@ -333,13 +483,19 @@ async function parsePfxCustom(pfxBase64: string, password: string): Promise<Cert
       }
 
       const safeBags = (safeBagsAsn1 as any).value as forge.asn1.Asn1[];
-      for (const bag of safeBags) {
-        const result = await processSafeBag(bag, password);
-        if (result.key) { privateKeyCrypto = result.key; privateKeyPem = result.keyPem!; }
-        if (result.cert) certificate = result.cert;
+      diag.log(`SafeContent[${scIdx}]: ${safeBags.length} bags found`);
+      for (let bagIdx = 0; bagIdx < safeBags.length; bagIdx++) {
+        try {
+          const result = await processSafeBag(safeBags[bagIdx], password, diag);
+          if (result.key) { privateKeyCrypto = result.key; privateKeyPem = result.keyPem!; diag.log(`Bag[${bagIdx}]: got private key`); }
+          if (result.cert) { certificate = result.cert; diag.log(`Bag[${bagIdx}]: got certificate`); }
+        } catch (bagErr) {
+          diag.error(`Bag[${bagIdx}] processing failed`, bagErr);
+        }
       }
     } else if (contentTypeOid === "1.2.840.113549.1.7.6") {
       // encryptedData
+      diag.log(`SafeContent[${scIdx}]: encryptedData`);
       const encDataWrapper = contentInfo[1];
       let encDataSeq: forge.asn1.Asn1;
       if ((encDataWrapper as any).constructed && (encDataWrapper as any).type === 0xa0) {
@@ -353,31 +509,46 @@ async function parsePfxCustom(pfxBase64: string, password: string): Promise<Cert
       const encContentInfo = encDataValues[1];
       const encContentValues = (encContentInfo as any).value as forge.asn1.Asn1[];
 
-      // contentType, encAlgorithm, [0] encryptedContent
+      // Log the encryption algorithm structure
       const encAlgorithm = encContentValues[1];
+      diag.log(`Encryption algorithm ASN1: ${describeAsn1Node(encAlgorithm, 0).substring(0, 400)}`);
+      
       const encContent = encContentValues[2];
-
       const encBytes = forgeStringToBytes((encContent as any).value as string);
+      diag.log(`Encrypted content: ${encBytes.length} bytes`);
       
       try {
-        const decryptedBytes = await decryptPBEData(encBytes, encAlgorithm, password);
-        console.log(`[nfse-emission] Decrypted encryptedData: ${decryptedBytes.length} bytes`);
+        const decryptedBytes = await decryptPBEData(encBytes, encAlgorithm, password, diag);
+        diag.log(`Decrypted encryptedData: ${decryptedBytes.length} bytes`);
 
         const decryptedAsn1 = forge.asn1.fromDer(forge.util.createBuffer(decryptedBytes));
         const safeBags = (decryptedAsn1 as any).value as forge.asn1.Asn1[];
-        for (const bag of safeBags) {
-          const result = await processSafeBag(bag, password);
-          if (result.key) { privateKeyCrypto = result.key; privateKeyPem = result.keyPem!; }
-          if (result.cert) certificate = result.cert;
+        diag.log(`Decrypted ${safeBags.length} bags from encryptedData`);
+        for (let bagIdx = 0; bagIdx < safeBags.length; bagIdx++) {
+          try {
+            const result = await processSafeBag(safeBags[bagIdx], password, diag);
+            if (result.key) { privateKeyCrypto = result.key; privateKeyPem = result.keyPem!; diag.log(`EncBag[${bagIdx}]: got private key`); }
+            if (result.cert) { certificate = result.cert; diag.log(`EncBag[${bagIdx}]: got certificate`); }
+          } catch (bagErr) {
+            diag.error(`EncBag[${bagIdx}] processing failed`, bagErr);
+          }
         }
       } catch (decErr) {
-        console.warn(`[nfse-emission] Failed to decrypt encryptedData: ${(decErr as Error).message}`);
+        diag.error(`Failed to decrypt encryptedData`, decErr);
       }
+    } else {
+      diag.warn(`SafeContent[${scIdx}]: unknown type OID ${contentTypeOid}`);
     }
   }
 
-  if (!privateKeyCrypto) throw new Error("Chave privada não encontrada no PFX (parser customizado)");
-  if (!certificate) throw new Error("Certificado não encontrado no PFX (parser customizado)");
+  if (!privateKeyCrypto) {
+    const errMsg = `Chave privada não encontrada no PFX (parser customizado). Full log:\n${diag.getFullLog()}`;
+    throw new Error(errMsg);
+  }
+  if (!certificate) {
+    const errMsg = `Certificado não encontrado no PFX (parser customizado). Full log:\n${diag.getFullLog()}`;
+    throw new Error(errMsg);
+  }
 
   const certificatePem = forge.pki.certificateToPem(certificate);
   const certAsn1 = forge.pki.certificateToAsn1(certificate);
@@ -388,7 +559,7 @@ async function parsePfxCustom(pfxBase64: string, password: string): Promise<Cert
   const formatDN = (attrs: forge.pki.CertificateField[]) =>
     attrs.map(a => `${a.shortName}=${a.value}`).join(", ");
 
-  console.log(`[nfse-emission] Custom parser OK: ${formatDN(certificate.subject.attributes)}, válido até ${certificate.validity.notAfter.toISOString()}`);
+  diag.log(`Custom parser OK: ${formatDN(certificate.subject.attributes)}, válido até ${certificate.validity.notAfter.toISOString()}`);
 
   return {
     privateKeyPem,
@@ -402,13 +573,23 @@ async function parsePfxCustom(pfxBase64: string, password: string): Promise<Cert
   };
 }
 
-async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{ key?: CryptoKey; keyPem?: string; cert?: forge.pki.Certificate }> {
+async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: DiagnosticLogger): Promise<{ key?: CryptoKey; keyPem?: string; cert?: forge.pki.Certificate }> {
+  const log = diag || getDiag();
   const bagValues = (bag as any).value as forge.asn1.Asn1[];
-  const bagId = forge.asn1.derToOid(bagValues[0]);
+  
+  let bagId: string;
+  try {
+    bagId = safeGetOid(bagValues[0]);
+  } catch (oidErr) {
+    log.error(`Cannot extract bag OID`, oidErr);
+    log.log(`Bag first child: ${describeAsn1Node(bagValues[0], 0)}`);
+    return {};
+  }
+  log.log(`SafeBag OID: ${bagId}`);
 
   // PKCS8ShroudedKeyBag
   if (bagId === "1.2.840.113549.1.12.10.1.2") {
-    console.log("[nfse-emission] Found PKCS8ShroudedKeyBag");
+    log.log("Found PKCS8ShroudedKeyBag - extracting private key");
     const keyBagWrapper = bagValues[1];
     let keyBagAsn1: forge.asn1.Asn1;
     if ((keyBagWrapper as any).constructed && ((keyBagWrapper as any).type === 0xa0)) {
@@ -420,10 +601,13 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
     // EncryptedPrivateKeyInfo: algorithm, encryptedData
     const epkiValues = (keyBagAsn1 as any).value as forge.asn1.Asn1[];
     const algorithm = epkiValues[0];
+    log.log(`Key encryption algorithm: ${describeAsn1Node(algorithm, 0).substring(0, 300)}`);
+    
     const encData = forgeStringToBytes((epkiValues[1] as any).value as string);
+    log.log(`Encrypted key data: ${encData.length} bytes`);
 
-    const decryptedPkcs8 = await decryptPBEData(encData, algorithm, password);
-    console.log(`[nfse-emission] Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes`);
+    const decryptedPkcs8 = await decryptPBEData(encData, algorithm, password, diag);
+    log.log(`Decrypted PKCS8 key: ${decryptedPkcs8.length} bytes`);
 
     // Import to Web Crypto
     const key = await crypto.subtle.importKey(
@@ -433,6 +617,7 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
       true,
       ["sign"]
     );
+    log.log("Private key imported to Web Crypto successfully");
 
     // Also create PEM
     const keyDer = await crypto.subtle.exportKey("pkcs8", key);
@@ -444,6 +629,7 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
 
   // CertBag
   if (bagId === "1.2.840.113549.1.12.10.1.3") {
+    log.log("Found CertBag - extracting certificate");
     const certBagWrapper = bagValues[1];
     let certBagAsn1: forge.asn1.Asn1;
     if ((certBagWrapper as any).constructed && ((certBagWrapper as any).type === 0xa0)) {
@@ -453,7 +639,8 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
     }
 
     const certBagValues = (certBagAsn1 as any).value as forge.asn1.Asn1[];
-    const certTypeOid = forge.asn1.derToOid(certBagValues[0]);
+    const certTypeOid = safeGetOid(certBagValues[0]);
+    log.log(`CertBag type OID: ${certTypeOid}`);
 
     if (certTypeOid === "1.2.840.113549.1.9.22.1") {
       // x509Certificate
@@ -467,12 +654,16 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string): Promise<{
 
       const certDer = (certOctet as any).value as string;
       const certAsn1 = forge.asn1.fromDer(certDer);
+
       const cert = forge.pki.certificateFromAsn1(certAsn1);
-      console.log(`[nfse-emission] Found certificate: ${cert.subject.getField("CN")?.value || "?"}`);
+      log.log(`Found certificate: CN=${cert.subject.getField("CN")?.value || "?"}, serial=${cert.serialNumber}, notAfter=${cert.validity.notAfter.toISOString()}`);
       return { cert };
+    } else {
+      log.warn(`Unknown cert type OID: ${certTypeOid}`);
     }
   }
 
+  log.log(`SafeBag OID ${bagId} not handled (not a key or cert bag)`);
   return {};
 }
 
@@ -882,21 +1073,51 @@ Deno.serve(async (req: Request) => {
     }
 
     // 3. Parse PFX certificate
+    _currentDiag = new DiagnosticLogger(); // Reset diagnostic logger for this request
+    const diag = getDiag();
     let certData: CertificateData;
     try {
       certData = await parsePfxCertificate(config.certificado_base64, config.certificado_senha);
-      console.log(`[nfse-emission] Cert OK: ${certData.subjectDN}, até ${certData.notAfter.toISOString()}`);
+      diag.log(`Cert OK: ${certData.subjectDN}, até ${certData.notAfter.toISOString()}`);
 
       if (certData.notAfter < new Date()) {
+        // Persist diagnostic log even on expiry
+        await supabase.from("logs_integracao_nfse").insert({
+          tenant_id: tenantId, nota_fiscal_id, operacao: "parse_certificado",
+          sucesso: false, erro_mensagem: `Certificado expirado em ${certData.notAfter.toISOString().split("T")[0]}`,
+          request_payload: diag.getFullLog().substring(0, 5000),
+        });
         return new Response(JSON.stringify({ error: `Certificado expirado em ${certData.notAfter.toISOString().split("T")[0]}` }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     } catch (certError) {
+      const fullDiagLog = diag.getFullLog();
       console.error("[nfse-emission] Cert error:", certError);
+      console.error("[nfse-emission] Full diagnostic log:\n" + fullDiagLog);
+      
+      // Persist full diagnostic to logs_integracao_nfse for debugging
+      await supabase.from("logs_integracao_nfse").insert({
+        tenant_id: tenantId, nota_fiscal_id, operacao: "parse_certificado",
+        sucesso: false,
+        erro_mensagem: certError instanceof Error ? certError.message : "Erro desconhecido",
+        request_payload: fullDiagLog.substring(0, 5000),
+        response_payload: certError instanceof Error ? (certError.stack || "").substring(0, 5000) : null,
+      });
+      
+      // Also create an evento for visibility in UI
+      await supabase.from("eventos_nfse").insert({
+        tenant_id: tenantId, nota_fiscal_id, tipo: "rejeicao",
+        descricao: `Erro ao ler certificado digital: ${certError instanceof Error ? certError.message.substring(0, 200) : "Erro desconhecido"}`,
+        mensagem: fullDiagLog.substring(0, 2000),
+        usuario_id: userId,
+        codigo_retorno: "CERT_ERROR",
+      });
+      
       return new Response(JSON.stringify({
         error: "Erro ao ler certificado digital. Verifique se o arquivo PFX e a senha estão corretos.",
-        details: certError instanceof Error ? certError.message : "Erro desconhecido",
+        details: certError instanceof Error ? certError.message.substring(0, 500) : "Erro desconhecido",
+        diagnosticLog: fullDiagLog.substring(0, 3000),
       }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
