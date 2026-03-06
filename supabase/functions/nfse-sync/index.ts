@@ -34,7 +34,6 @@ Deno.serve(async (req: Request) => {
 
     const authHeader = req.headers.get("Authorization");
     if (authHeader?.startsWith("Bearer ") && !authHeader.includes(supabaseAnonKey)) {
-      // Manual trigger with user auth
       const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } },
       });
@@ -45,7 +44,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Parse body for manual trigger with specific tenant
     let body: Record<string, unknown> = {};
     try {
       body = await req.json();
@@ -101,12 +99,13 @@ Deno.serve(async (req: Request) => {
         .single();
 
       try {
-        // 1. Buscar notas pendentes de sincronização (fila_emissao, enviado)
+        // 1. Buscar notas pendentes (enviado) - aguardando retorno da API
+        // Notas em fila_emissao devem ser processadas pela nfse-emission, NÃO pela sync
         const { data: notasPendentes } = await supabase
           .from("notas_fiscais")
           .select("id, status, chave_acesso, numero_dps, numero_nfse, tomador_nome, valor_servico")
           .eq("tenant_id", tenant.id)
-          .in("status", ["fila_emissao", "enviado"]);
+          .eq("status", "enviado");
 
         // 2. Buscar notas autorizadas para verificar eventos (cancelamento, substituição)
         const { data: notasAutorizadas } = await supabase
@@ -120,97 +119,35 @@ Deno.serve(async (req: Request) => {
 
         for (const nota of todasNotas) {
           try {
-            // TODO: Substituir por chamada real à API Nacional NFS-e
-            // const response = await fetch(
-            //   `${NFSE_API_BASE}/contribuinte/nfse/${nota.chave_acesso}`,
-            //   { headers: { 'Authorization': `Bearer ${apiKey}` } }
-            // );
-            // const apiData = await response.json();
+            if (nota.status === "enviado" && nota.chave_acesso) {
+              // TODO: Consultar status real na API Nacional NFS-e
+              // const response = await fetch(
+              //   `${NFSE_API_BASE}/contribuinte/nfse/${nota.chave_acesso}`,
+              //   { headers: { 'Authorization': `Bearer ${apiKey}` } }
+              // );
+              // const apiData = await response.json();
+              //
+              // if (apiData.status === 'autorizado') {
+              //   await supabase.from("notas_fiscais").update({
+              //     status: "autorizado",
+              //     numero_nfse: apiData.numero_nfse,
+              //     data_autorizacao: apiData.data_autorizacao,
+              //   }).eq("id", nota.id);
+              //   result.atualizadas++;
+              // } else if (apiData.status === 'rejeitado') {
+              //   await supabase.from("notas_fiscais").update({
+              //     status: "rejeitado",
+              //     motivo_rejeicao: apiData.motivo,
+              //   }).eq("id", nota.id);
+              // }
 
-            // Simulação: notas pendentes são autorizadas, autorizadas mantêm status
-            if (nota.status === "fila_emissao" || nota.status === "enviado") {
-              // Simular autorização
-              const numeroNfse = nota.numero_nfse || `NFSE-SYNC-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-              const chaveAcesso = nota.chave_acesso || `CHAVE-${tenant.id.substring(0, 8)}-${Date.now()}`;
-
-              await supabase
-                .from("notas_fiscais")
-                .update({
-                  status: "autorizado",
-                  numero_nfse: numeroNfse,
-                  chave_acesso: chaveAcesso,
-                  data_autorizacao: new Date().toISOString(),
-                })
-                .eq("id", nota.id);
-
-              await supabase.from("eventos_nfse").insert({
-                tenant_id: tenant.id,
-                nota_fiscal_id: nota.id,
-                tipo: "autorizacao",
-                descricao: `NFS-e autorizada via sincronização: ${numeroNfse}`,
-                usuario_id: userId,
-                usuario_nome: "Sincronização Automática",
-              });
-
-              // Audit log
-              await supabase.from("audit_logs").insert({
-                tenant_id: tenant.id,
-                user_id: userId,
-                user_name: "Sincronização Automática",
-                action: "NFSE_EMISSAO",
-                table_name: "notas_fiscais",
-                record_id: nota.id,
-                record_label: `Autorizada via sync: ${numeroNfse}`,
-                new_data: { numero_nfse: numeroNfse, chave_acesso: chaveAcesso, status: "autorizado" },
-              });
-
-              result.atualizadas++;
-              result.detalhes.push(`Nota ${nota.id} autorizada: ${numeroNfse}`);
+              result.detalhes.push(
+                `Nota ${nota.id} (enviado): aguardando implementação da consulta à API Nacional`
+              );
             } else if (nota.status === "autorizado") {
-              // Verificar eventos na API (cancelamento, substituição)
-              // TODO: Chamada real à API para verificar eventos
-              // Quando implementado, registrar audit_logs para cancelamento/substituição:
-              //
-              // if (apiData.status === 'cancelado') {
-              //   await supabase.from("notas_fiscais")
-              //     .update({ status: "cancelado" })
-              //     .eq("id", nota.id);
-              //   await supabase.from("eventos_nfse").insert({
-              //     tenant_id: tenant.id,
-              //     nota_fiscal_id: nota.id,
-              //     tipo: "cancelamento",
-              //     descricao: "Cancelamento detectado via sincronização",
-              //     usuario_nome: "Sincronização Automática",
-              //   });
-              //   await supabase.from("audit_logs").insert({
-              //     tenant_id: tenant.id,
-              //     user_id: userId,
-              //     user_name: "Sincronização Automática",
-              //     action: "NFSE_CANCELAMENTO",
-              //     table_name: "notas_fiscais",
-              //     record_id: nota.id,
-              //     record_label: `Cancelamento detectado: ${nota.numero_nfse}`,
-              //     new_data: { status: "cancelado" },
-              //   });
-              //   result.canceladas++;
-              // }
-              //
-              // if (apiData.status === 'substituido') {
-              //   await supabase.from("notas_fiscais")
-              //     .update({ status: "substituido" })
-              //     .eq("id", nota.id);
-              //   await supabase.from("audit_logs").insert({
-              //     tenant_id: tenant.id,
-              //     user_id: userId,
-              //     user_name: "Sincronização Automática",
-              //     action: "NFSE_SUBSTITUICAO",
-              //     table_name: "notas_fiscais",
-              //     record_id: nota.id,
-              //     record_label: `Substituição detectada: ${nota.numero_nfse}`,
-              //     new_data: { status: "substituido" },
-              //   });
-              //   result.substituidas++;
-              // }
+              // TODO: Verificar eventos na API (cancelamento, substituição)
+              // Quando implementado, registrar eventos e audit_logs
+              // Sem chamada real, não alterar status
             }
           } catch (notaError) {
             result.erros++;
