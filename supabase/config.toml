@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.nfse-eventos]
 verify_jwt = false
+
+[functions.nfse-sync]
+verify_jwt = false
