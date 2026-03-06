@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, FileCheck, Search, RefreshCw, Eye } from 'lucide-react';
+import { Loader2, FileCheck, Search, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -53,7 +53,7 @@ export default function NfseNotasEmitidas() {
   const { toast } = useToast();
   const { tenant } = useTenant();
   const { canRead } = usePermissions();
-  const navigate = useNavigate();
+  
 
   const [notas, setNotas] = useState<NotaFiscal[]>([]);
   const [loading, setLoading] = useState(true);
