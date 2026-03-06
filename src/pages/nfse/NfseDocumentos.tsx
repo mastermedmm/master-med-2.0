@@ -171,7 +171,17 @@ export default function NfseDocumentos() {
         URL.revokeObjectURL(url);
       } else {
         toast({ title: 'Documento sem conteúdo disponível', variant: 'destructive' });
+        return;
       }
+
+      // Audit log for download
+      logEvent({
+        action: 'NFSE_DOWNLOAD',
+        tableName: 'documentos_nfse',
+        recordId: doc.id,
+        recordLabel: doc.nome_arquivo,
+        newData: { tipo: doc.tipo, nota_fiscal_id: doc.nota_fiscal_id, storage_path: doc.storage_path },
+      });
     } catch (err) {
       toast({ title: 'Erro ao baixar documento', description: err instanceof Error ? err.message : 'Erro desconhecido', variant: 'destructive' });
     }
