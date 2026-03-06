@@ -1648,7 +1648,7 @@ export type Database = {
             foreignKeyName: "notas_fiscais_tomador_id_fkey"
             columns: ["tomador_id"]
             isOneToOne: false
-            referencedRelation: "hospitals"
+            referencedRelation: "tomadores_nfse"
             referencedColumns: ["id"]
           },
         ]
@@ -2221,6 +2221,71 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tomadores_nfse: {
+        Row: {
+          ativo: boolean
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cpf_cnpj: string
+          created_at: string
+          email: string | null
+          id: string
+          inscricao_municipal: string | null
+          logradouro: string | null
+          nome: string
+          numero: string | null
+          telefone: string | null
+          tenant_id: string
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cpf_cnpj: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          inscricao_municipal?: string | null
+          logradouro?: string | null
+          nome: string
+          numero?: string | null
+          telefone?: string | null
+          tenant_id: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cpf_cnpj?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          inscricao_municipal?: string | null
+          logradouro?: string | null
+          nome?: string
+          numero?: string | null
+          telefone?: string | null
+          tenant_id?: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tomadores_nfse_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
