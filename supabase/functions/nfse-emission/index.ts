@@ -27,9 +27,27 @@ interface CertificateData {
 }
 
 function parsePfxCertificate(pfxBase64: string, password: string): CertificateData {
+  console.log(`[nfse-emission] Tentando parsear certificado PFX (base64 length: ${pfxBase64.length}, senha length: ${password.length})`);
   const pfxDer = forge.util.decode64(pfxBase64);
   const pfxAsn1 = forge.asn1.fromDer(pfxDer);
-  const p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, password);
+  
+  // Try with password directly first, then with strict=false
+  let p12: forge.pkcs12.Pkcs12Pfx;
+  try {
+    p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, password);
+  } catch (e1) {
+    console.log(`[nfse-emission] Tentativa 1 falhou, tentando com strict=false...`);
+    try {
+      p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, false, password);
+    } catch (e2) {
+      console.log(`[nfse-emission] Tentativa 2 falhou, tentando sem senha...`);
+      try {
+        p12 = forge.pkcs12.pkcs12FromAsn1(pfxAsn1, '');
+      } catch (e3) {
+        throw new Error(`Não foi possível abrir o certificado PFX. Verifique se a senha está correta. Detalhes: ${(e1 as Error).message}`);
+      }
+    }
+  }
 
   // Extract private key
   const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
