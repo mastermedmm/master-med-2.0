@@ -591,19 +591,50 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: Dia
   if (bagId === "1.2.840.113549.1.12.10.1.2") {
     log.log("Found PKCS8ShroudedKeyBag - extracting private key");
     const keyBagWrapper = bagValues[1];
+    log.log(`KeyBag wrapper: type=0x${((keyBagWrapper as any).type || 0).toString(16)}, tagClass=0x${((keyBagWrapper as any).tagClass || 0).toString(16)}, constructed=${(keyBagWrapper as any).constructed}`);
+    
+    // Unwrap context-specific [0] wrapper - forge uses tagClass=0x80 for CONTEXT_SPECIFIC
     let keyBagAsn1: forge.asn1.Asn1;
-    if ((keyBagWrapper as any).constructed && ((keyBagWrapper as any).type === 0xa0)) {
+    const wType = (keyBagWrapper as any).type;
+    const wTagClass = (keyBagWrapper as any).tagClass;
+    const wConstructed = (keyBagWrapper as any).constructed;
+    if (wConstructed && (wTagClass === 0x80 || wType === 0xa0 || (wTagClass === 0x80 && wType === 0x00))) {
       keyBagAsn1 = ((keyBagWrapper as any).value as forge.asn1.Asn1[])[0];
+      log.log("Unwrapped context-specific [0] wrapper");
+    } else if (wConstructed && Array.isArray((keyBagWrapper as any).value)) {
+      // Try unwrapping any constructed wrapper with array children
+      const children = (keyBagWrapper as any).value as forge.asn1.Asn1[];
+      if (children.length === 1 && (children[0] as any).constructed) {
+        keyBagAsn1 = children[0];
+        log.log("Unwrapped single-child constructed wrapper");
+      } else {
+        keyBagAsn1 = keyBagWrapper;
+      }
     } else {
       keyBagAsn1 = keyBagWrapper;
     }
+    
+    log.log(`KeyBag inner: ${describeAsn1Node(keyBagAsn1, 0).substring(0, 300)}`);
 
     // EncryptedPrivateKeyInfo: algorithm, encryptedData
     const epkiValues = (keyBagAsn1 as any).value as forge.asn1.Asn1[];
+    if (!epkiValues || epkiValues.length < 2) {
+      log.error(`EncryptedPrivateKeyInfo has unexpected structure: ${epkiValues?.length || 0} children`);
+      log.log(`Full keyBagAsn1: ${describeAsn1Node(keyBagAsn1, 0).substring(0, 500)}`);
+      return {};
+    }
+    
     const algorithm = epkiValues[0];
     log.log(`Key encryption algorithm: ${describeAsn1Node(algorithm, 0).substring(0, 300)}`);
     
-    const encData = forgeStringToBytes((epkiValues[1] as any).value as string);
+    const encDataNode = epkiValues[1];
+    if (!encDataNode || (encDataNode as any).value === undefined) {
+      log.error(`Encrypted data node is undefined or has no value`);
+      log.log(`epkiValues[1]: ${describeAsn1Node(encDataNode, 0)}`);
+      return {};
+    }
+    
+    const encData = forgeStringToBytes((encDataNode as any).value as string);
     log.log(`Encrypted key data: ${encData.length} bytes`);
 
     const decryptedPkcs8 = await decryptPBEData(encData, algorithm, password, diag);
