@@ -49,6 +49,15 @@ const MODULE_LABELS: Record<ModuleName, string> = {
   permissions: 'Permissões',
   settings: 'Configurações',
   audit_logs: 'Log de Eventos',
+  'nfse.dashboard': 'NFSE - Dashboard',
+  'nfse.emitir': 'NFSE - Emitir Nota',
+  'nfse.visualizar': 'NFSE - Notas Emitidas',
+  'nfse.rejeicoes': 'NFSE - Rejeições',
+  'nfse.eventos': 'NFSE - Eventos da Nota',
+  'nfse.sincronizacao': 'NFSE - Sincronização',
+  'nfse.documentos': 'NFSE - Documentos',
+  'nfse.configuracoes': 'NFSE - Configurações',
+  'nfse.reprocessar': 'NFSE - Reprocessar',
 };
 
 const PERMISSION_LABELS = {

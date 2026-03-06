@@ -41,6 +41,16 @@ import SiegIntegration from "./pages/SiegIntegration";
 import AuditLogs from "./pages/AuditLogs";
 import NotFound from "./pages/NotFound";
 
+// NFSE Pages
+import NfseDashboard from "./pages/nfse/NfseDashboard";
+import NfseEmitir from "./pages/nfse/NfseEmitir";
+import NfseNotasEmitidas from "./pages/nfse/NfseNotasEmitidas";
+import NfseRejeicoes from "./pages/nfse/NfseRejeicoes";
+import NfseEventos from "./pages/nfse/NfseEventos";
+import NfseSincronizacao from "./pages/nfse/NfseSincronizacao";
+import NfseDocumentos from "./pages/nfse/NfseDocumentos";
+import NfseConfiguracoes from "./pages/nfse/NfseConfiguracoes";
+
 // Doctor Portal Pages
 import DoctorLogin from "./pages/doctor-portal/DoctorLogin";
 import DoctorChangePassword from "./pages/doctor-portal/DoctorChangePassword";
@@ -283,6 +293,15 @@ function AppRoutes() {
         }
       />
       
+      {/* NFSE Routes */}
+      <Route path={ROUTES.nfse.dashboard} element={<ProtectedRoute><NfseDashboard /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.emitir} element={<ProtectedRoute><NfseEmitir /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.notasEmitidas} element={<ProtectedRoute><NfseNotasEmitidas /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.rejeicoes} element={<ProtectedRoute><NfseRejeicoes /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.eventos} element={<ProtectedRoute><NfseEventos /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.sincronizacao} element={<ProtectedRoute><NfseSincronizacao /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.documentos} element={<ProtectedRoute><NfseDocumentos /></ProtectedRoute>} />
+      <Route path={ROUTES.nfse.configuracoes} element={<ProtectedRoute><NfseConfiguracoes /></ProtectedRoute>} />
       {/* Doctor Portal Routes - Portuguese URLs */}
       <Route path={ROUTES.doctorPortal.login} element={<DoctorLogin />} />
       <Route path={ROUTES.doctorPortal.changePassword} element={<DoctorChangePassword />} />
