@@ -125,7 +125,25 @@ function forgeStringToBytes(str: string): Uint8Array {
   return bytes;
 }
 
-// Safe OID extraction from ASN1 node - fixes "getByte is not a function"
+// Convert Uint8Array to forge binary string
+function uint8ToForgeStr(arr: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i]);
+  return s;
+}
+
+// Remove PKCS#7 padding from decrypted data
+function removePkcs7Padding(data: Uint8Array, blockSize: number): Uint8Array {
+  if (data.length === 0) return data;
+  const padByte = data[data.length - 1];
+  if (padByte < 1 || padByte > blockSize) return data;
+  for (let i = data.length - padByte; i < data.length; i++) {
+    if (data[i] !== padByte) return data;
+  }
+  return data.slice(0, data.length - padByte);
+}
+
+
 function safeGetOid(asn1Node: any): string {
   try {
     if (typeof asn1Node.value === "string") {
