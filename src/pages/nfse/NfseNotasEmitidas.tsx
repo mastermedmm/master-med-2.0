@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, FileCheck, Search, RefreshCw } from 'lucide-react';
+import { Loader2, FileCheck, Search, RefreshCw, RotateCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { usePermissions } from '@/hooks/usePermissions';
