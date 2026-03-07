@@ -830,7 +830,6 @@ async function processSafeBag(bag: forge.asn1.Asn1, password: string, diag?: Dia
 }
 
 async function buildCertDataFromForge(forgePrivateKey: forge.pki.rsa.PrivateKey, cert: forge.pki.Certificate): Promise<CertificateData> {
-  const privateKeyPem = forge.pki.privateKeyToPem(forgePrivateKey);
   const certificatePem = forge.pki.certificateToPem(cert);
 
   const certAsn1 = forge.pki.certificateToAsn1(cert);
@@ -838,9 +837,17 @@ async function buildCertDataFromForge(forgePrivateKey: forge.pki.rsa.PrivateKey,
   const certificateDer = new Uint8Array(certDerBytes.length);
   for (let i = 0; i < certDerBytes.length; i++) certificateDer[i] = certDerBytes.charCodeAt(i);
 
-  const pkcs8Der = forge.asn1.toDer(forge.pki.privateKeyToAsn1(forgePrivateKey)).getBytes();
-  const pkcs8Bytes = new Uint8Array(pkcs8Der.length);
-  for (let i = 0; i < pkcs8Der.length; i++) pkcs8Bytes[i] = pkcs8Der.charCodeAt(i);
+  // Convert private key to PKCS#8 format (BEGIN PRIVATE KEY) required by Deno mTLS
+  const rsaPrivateKeyAsn1 = forge.pki.privateKeyToAsn1(forgePrivateKey);
+  const privateKeyInfoAsn1 = forge.pki.wrapRsaPrivateKey(rsaPrivateKeyAsn1);
+  const pkcs8DerStr = forge.asn1.toDer(privateKeyInfoAsn1).getBytes();
+  const pkcs8Bytes = new Uint8Array(pkcs8DerStr.length);
+  for (let i = 0; i < pkcs8DerStr.length; i++) pkcs8Bytes[i] = pkcs8DerStr.charCodeAt(i);
+
+  // Generate PKCS#8 PEM
+  const pkcs8Base64 = btoa(String.fromCharCode(...pkcs8Bytes));
+  const privateKeyPem = `-----BEGIN PRIVATE KEY-----\n${pkcs8Base64.match(/.{1,64}/g)?.join("\n")}\n-----END PRIVATE KEY-----`;
+
   const privateKeyCrypto = await crypto.subtle.importKey(
     "pkcs8",
     pkcs8Bytes,
