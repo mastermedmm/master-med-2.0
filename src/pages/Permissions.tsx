@@ -175,6 +175,7 @@ export default function Permissions() {
   const adminPermissions = permissions.filter(p => p.role === 'admin');
   const operadorPermissions = permissions.filter(p => p.role === 'operador');
   const financeiroPermissions = permissions.filter(p => p.role === 'financeiro');
+  const juridicoPermissions = permissions.filter(p => p.role === 'juridico');
 
   const PermissionTable = ({ 
     rolePermissions, 
