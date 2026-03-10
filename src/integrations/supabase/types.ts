@@ -421,6 +421,60 @@ export type Database = {
           },
         ]
       }
+      contratos: {
+        Row: {
+          created_at: string
+          data_contratacao: string
+          data_vencimento: string | null
+          fornecedor_nome: string
+          id: string
+          issuer_id: string
+          observacoes: string | null
+          status: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_contratacao: string
+          data_vencimento?: string | null
+          fornecedor_nome: string
+          id?: string
+          issuer_id: string
+          observacoes?: string | null
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_contratacao?: string
+          data_vencimento?: string | null
+          fornecedor_nome?: string
+          id?: string
+          issuer_id?: string
+          observacoes?: string | null
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_sessions: {
         Row: {
           created_at: string
