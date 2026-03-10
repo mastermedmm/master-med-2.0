@@ -279,16 +279,12 @@ export default function JuridicoRTDetail() {
             <RTAttachmentsTab vinculoId={vinculo.id} />
           </TabsContent>
 
-          {/* Renovação */}
           <TabsContent value="renovacao">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-sm font-medium text-foreground">Módulo de renovação</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Em breve será possível gerenciar renovações do vínculo RT.
-                </p>
-              </div>
-            </div>
+            <RTRenewalTab
+              vinculoId={vinculo.id}
+              dataValidadeAtual={vinculo.data_validade}
+              statusAtual={vinculo.status}
+            />
           </TabsContent>
         </Tabs>
       </div>

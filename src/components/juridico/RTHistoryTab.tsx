@@ -19,6 +19,7 @@ const EVENT_COLORS: Record<string, string> = {
   alteracao_validade: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
   alteracao_status: "text-purple-600 bg-purple-500/10 dark:text-purple-400",
   encerramento: "text-red-600 bg-red-500/10 dark:text-red-400",
+  renovacao: "text-teal-600 bg-teal-500/10 dark:text-teal-400",
 };
 
 interface Props {
