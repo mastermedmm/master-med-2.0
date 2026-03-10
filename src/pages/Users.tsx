@@ -309,45 +309,19 @@ export default function Users() {
 
     setIsProcessing(true);
     try {
-      // Create user via Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUserEmail.trim(),
-        password: newUserPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: { full_name: newUserName.trim() }
-        }
+      // Create user via edge function (uses service role, no session switch)
+      const { data, error } = await supabase.functions.invoke('update-user', {
+        body: {
+          action: 'create',
+          email: newUserEmail.trim(),
+          password: newUserPassword,
+          fullName: newUserName.trim(),
+          role: newUserRole,
+        },
       });
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Wait a moment for triggers to create the default profile/role
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Associate user with current tenant
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ tenant_id: tenantId, active_tenant_id: tenantId })
-          .eq('user_id', authData.user.id);
-
-        if (profileError) {
-          console.error('Error updating profile tenant:', profileError);
-        }
-
-        // Update role and tenant_id in user_roles
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .update({ 
-            role: newUserRole as 'admin' | 'operador' | 'financeiro' | 'juridico',
-            tenant_id: tenantId 
-          })
-          .eq('user_id', authData.user.id);
-
-        if (roleError) {
-          console.error('Error updating role:', roleError);
-        }
-      }
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: 'Usuário criado',
@@ -359,14 +333,9 @@ export default function Users() {
     } catch (error: any) {
       console.error('Error creating user:', error);
       
-      let message = error.message;
-      if (error.message.includes('already registered')) {
-        message = 'Este email já está cadastrado no sistema.';
-      }
-      
       toast({
         title: 'Erro ao criar usuário',
-        description: message,
+        description: error.message || 'Erro desconhecido',
         variant: 'destructive',
       });
     } finally {
