@@ -44,6 +44,7 @@ export const ROUTES = {
   juridico: {
     contratos: '/juridico/contratos',
     rts: '/juridico/rts',
+    rtDetail: (id: string) => `/juridico/rts/${id}`,
   },
   
   // Portal do Médico
