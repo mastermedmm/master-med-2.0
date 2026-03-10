@@ -82,6 +82,13 @@ export function AppSidebar() {
     }
   }, [isNfseRouteActive]);
 
+  // Keep menu open when navigating to a Juridico route
+  useEffect(() => {
+    if (isJuridicoRouteActive) {
+      setIsJuridicoOpen(true);
+    }
+  }, [isJuridicoRouteActive]);
+
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar">
       {/* Logo and Tenant Switcher */}
