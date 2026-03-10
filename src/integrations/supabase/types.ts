@@ -2414,6 +2414,82 @@ export type Database = {
           },
         ]
       }
+      vinculos_rt: {
+        Row: {
+          conselho_pj: string | null
+          created_at: string
+          data_inicio_responsabilidade: string | null
+          data_validade: string | null
+          empresa_id: string
+          id: string
+          login_portal_conselho: string | null
+          observacoes: string | null
+          profissional_id: string
+          registro_pj: string | null
+          senha_portal_conselho: string | null
+          status: Database["public"]["Enums"]["rt_status"]
+          tenant_id: string | null
+          uf_conselho_pj: string | null
+          updated_at: string
+        }
+        Insert: {
+          conselho_pj?: string | null
+          created_at?: string
+          data_inicio_responsabilidade?: string | null
+          data_validade?: string | null
+          empresa_id: string
+          id?: string
+          login_portal_conselho?: string | null
+          observacoes?: string | null
+          profissional_id: string
+          registro_pj?: string | null
+          senha_portal_conselho?: string | null
+          status?: Database["public"]["Enums"]["rt_status"]
+          tenant_id?: string | null
+          uf_conselho_pj?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conselho_pj?: string | null
+          created_at?: string
+          data_inicio_responsabilidade?: string | null
+          data_validade?: string | null
+          empresa_id?: string
+          id?: string
+          login_portal_conselho?: string | null
+          observacoes?: string | null
+          profissional_id?: string
+          registro_pj?: string | null
+          senha_portal_conselho?: string | null
+          status?: Database["public"]["Enums"]["rt_status"]
+          tenant_id?: string | null
+          uf_conselho_pj?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vinculos_rt_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vinculos_rt_profissional_id_fkey"
+            columns: ["profissional_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vinculos_rt_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2482,6 +2558,7 @@ export type Database = {
         | "recebido"
         | "parcialmente_recebido"
         | "cancelado"
+      rt_status: "ativo" | "inativo" | "vencido" | "cancelado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2658,6 +2735,7 @@ export const Constants = {
         "parcialmente_recebido",
         "cancelado",
       ],
+      rt_status: ["ativo", "inativo", "vencido", "cancelado"],
     },
   },
 } as const
