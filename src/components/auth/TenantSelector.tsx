@@ -15,6 +15,7 @@ const roleLabels: Record<string, string> = {
   admin: 'Administrador',
   operador: 'Operador',
   financeiro: 'Financeiro',
+  juridico: 'Jurídico',
 };
 
 export function TenantSelector({ tenants, onSelect, onBack }: TenantSelectorProps) {

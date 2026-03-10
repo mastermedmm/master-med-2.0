@@ -339,7 +339,7 @@ export default function Users() {
         const { error: roleError } = await supabase
           .from('user_roles')
           .update({ 
-            role: newUserRole as 'admin' | 'operador' | 'financeiro',
+            role: newUserRole as 'admin' | 'operador' | 'financeiro' | 'juridico',
             tenant_id: tenantId 
           })
           .eq('user_id', authData.user.id);

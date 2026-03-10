@@ -6,7 +6,7 @@ export interface AvailableTenant {
   tenant_id: string;
   tenant_name: string;
   tenant_slug: string;
-  user_role: 'admin' | 'operador' | 'financeiro';
+  user_role: 'admin' | 'operador' | 'financeiro' | 'juridico';
 }
 
 export function useAvailableTenants() {
