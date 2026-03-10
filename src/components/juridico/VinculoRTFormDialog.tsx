@@ -74,6 +74,7 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
+  const { logEvent } = useRTHistoryLogger();
 
   const isEditing = !!vinculo;
 
