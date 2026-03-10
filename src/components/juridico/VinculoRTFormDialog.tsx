@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { useRTHistoryLogger } from "@/hooks/useRTHistory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +74,7 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
+  const { logEvent } = useRTHistoryLogger();
 
   const isEditing = !!vinculo;
 
@@ -141,15 +143,64 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
           .update(payload as any)
           .eq("id", vinculo.id);
         if (error) throw error;
+
+        // Log history events
+        const changes: string[] = [];
+        if (vinculo.data_validade !== (data.data_validade || null)) {
+          changes.push("validade");
+          await logEvent({
+            vinculoRtId: vinculo.id,
+            tipoEvento: "alteracao_validade",
+            descricao: `Validade alterada de ${vinculo.data_validade || "não definida"} para ${data.data_validade || "não definida"}`,
+            dadosAnteriores: { data_validade: vinculo.data_validade },
+            dadosNovos: { data_validade: data.data_validade },
+          });
+        }
+        if (vinculo.status !== data.status) {
+          const tipoEvento = data.status === "cancelado" ? "encerramento" as const : "alteracao_status" as const;
+          await logEvent({
+            vinculoRtId: vinculo.id,
+            tipoEvento,
+            descricao: `Status alterado de "${vinculo.status}" para "${data.status}"`,
+            dadosAnteriores: { status: vinculo.status },
+            dadosNovos: { status: data.status },
+          });
+        }
+        // General edit event (if no specific event was logged)
+        if (changes.length === 0 && vinculo.status === data.status) {
+          await logEvent({
+            vinculoRtId: vinculo.id,
+            tipoEvento: "edicao",
+            descricao: "Dados do vínculo atualizados",
+            dadosAnteriores: payload,
+            dadosNovos: payload,
+          });
+        }
+
+        return { id: vinculo.id };
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from("vinculos_rt" as any)
-          .insert(payload as any);
+          .insert(payload as any)
+          .select("id")
+          .single();
         if (error) throw error;
+
+        // Log creation
+        await logEvent({
+          vinculoRtId: (inserted as any).id,
+          tipoEvento: "criacao",
+          descricao: "Vínculo RT criado",
+          dadosNovos: payload as any,
+        });
+
+        return inserted;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vinculos_rt"] });
+      queryClient.invalidateQueries({ queryKey: ["vinculo_rt_detail"] });
+      queryClient.invalidateQueries({ queryKey: ["historico_vinculos_rt"] });
       toast.success(isEditing ? "Vínculo atualizado com sucesso!" : "Vínculo criado com sucesso!");
       onOpenChange(false);
       setForm(emptyForm);

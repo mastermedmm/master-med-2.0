@@ -55,6 +55,7 @@ import NfseTomadores from "./pages/nfse/NfseTomadores";
 // Juridico Pages
 import JuridicoContratos from "./pages/juridico/JuridicoContratos";
 import JuridicoRTs from "./pages/juridico/JuridicoRTs";
+import JuridicoRTDetail from "./pages/juridico/JuridicoRTDetail";
 // Doctor Portal Pages
 import DoctorLogin from "./pages/doctor-portal/DoctorLogin";
 import DoctorChangePassword from "./pages/doctor-portal/DoctorChangePassword";
@@ -311,6 +312,7 @@ function AppRoutes() {
       {/* Juridico Routes */}
       <Route path={ROUTES.juridico.contratos} element={<ProtectedRoute><JuridicoContratos /></ProtectedRoute>} />
       <Route path={ROUTES.juridico.rts} element={<ProtectedRoute><JuridicoRTs /></ProtectedRoute>} />
+      <Route path="/juridico/rts/:id" element={<ProtectedRoute><JuridicoRTDetail /></ProtectedRoute>} />
       {/* Doctor Portal Routes - Portuguese URLs */}
       <Route path={ROUTES.doctorPortal.login} element={<DoctorLogin />} />
       <Route path={ROUTES.doctorPortal.changePassword} element={<DoctorChangePassword />} />

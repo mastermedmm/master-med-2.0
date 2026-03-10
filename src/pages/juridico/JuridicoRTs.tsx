@@ -1,5 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ShieldCheck, Plus, Pencil, Eye, Search, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/config/routes";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +59,7 @@ export type VinculoRT = {
 export default function JuridicoRTs() {
   useDocumentTitle("Controle de RTs");
   const { tenant } = useTenant();
+  const navigate = useNavigate();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingVinculo, setEditingVinculo] = useState<VinculoRT | null>(null);
@@ -348,7 +351,7 @@ export default function JuridicoRTs() {
                             variant="ghost"
                             size="icon"
                             title="Visualizar"
-                            onClick={() => setViewingVinculo(v)}
+                            onClick={() => navigate(ROUTES.juridico.rtDetail(v.id))}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
