@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -27,13 +26,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { VinculoRTFormDialog } from "@/components/juridico/VinculoRTFormDialog";
 import { VinculoRTViewDialog } from "@/components/juridico/VinculoRTViewDialog";
-
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  ativo: { label: "Ativo", variant: "default" },
-  inativo: { label: "Inativo", variant: "secondary" },
-  vencido: { label: "Vencido", variant: "destructive" },
-  cancelado: { label: "Cancelado", variant: "outline" },
-};
+import { computeRTStatus, STATUS_CONFIG, type RTComputedStatus } from "@/utils/rtStatusUtils";
+import { cn } from "@/lib/utils";
 
 const UF_OPTIONS = [
   "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
@@ -121,25 +115,30 @@ export default function JuridicoRTs() {
     enabled: !!tenant?.id,
   });
 
-  // Filtered and sorted data
+  // Filtered data with computed status
   const filteredVinculos = useMemo(() => {
     if (!vinculos) return [];
-    return vinculos.filter((v) => {
-      if (filterEmpresa !== "all" && v.empresa_id !== filterEmpresa) return false;
-      if (filterProfissional !== "all" && v.profissional_id !== filterProfissional) return false;
-      if (filterStatus !== "all" && v.status !== filterStatus) return false;
-      if (filterUf !== "all" && v.uf_conselho_pj !== filterUf) return false;
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        const matchName = v.doctors?.name?.toLowerCase().includes(term);
-        const matchCrm = v.doctors?.crm?.toLowerCase().includes(term);
-        const matchEmpresa = v.issuers?.name?.toLowerCase().includes(term);
-        const matchCnpj = v.issuers?.cnpj?.toLowerCase().includes(term);
-        const matchRegistro = v.registro_pj?.toLowerCase().includes(term);
-        if (!matchName && !matchCrm && !matchEmpresa && !matchCnpj && !matchRegistro) return false;
-      }
-      return true;
-    });
+    return vinculos
+      .map((v) => ({
+        ...v,
+        _statusInfo: computeRTStatus(v.status, v.data_validade),
+      }))
+      .filter((v) => {
+        if (filterEmpresa !== "all" && v.empresa_id !== filterEmpresa) return false;
+        if (filterProfissional !== "all" && v.profissional_id !== filterProfissional) return false;
+        if (filterStatus !== "all" && v._statusInfo.computed !== filterStatus) return false;
+        if (filterUf !== "all" && v.uf_conselho_pj !== filterUf) return false;
+        if (searchTerm) {
+          const term = searchTerm.toLowerCase();
+          const matchName = v.doctors?.name?.toLowerCase().includes(term);
+          const matchCrm = v.doctors?.crm?.toLowerCase().includes(term);
+          const matchEmpresa = v.issuers?.name?.toLowerCase().includes(term);
+          const matchCnpj = v.issuers?.cnpj?.toLowerCase().includes(term);
+          const matchRegistro = v.registro_pj?.toLowerCase().includes(term);
+          if (!matchName && !matchCrm && !matchEmpresa && !matchCnpj && !matchRegistro) return false;
+        }
+        return true;
+      });
   }, [vinculos, filterEmpresa, filterProfissional, filterStatus, filterUf, searchTerm]);
 
   const hasActiveFilters = filterEmpresa !== "all" || filterProfissional !== "all" || filterStatus !== "all" || filterUf !== "all" || searchTerm !== "";
@@ -224,7 +223,7 @@ export default function JuridicoRTs() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
-                {Object.entries(STATUS_MAP).map(([key, { label }]) => (
+                {(Object.entries(STATUS_CONFIG) as [RTComputedStatus, { label: string }][]).map(([key, { label }]) => (
                   <SelectItem key={key} value={key}>{label}</SelectItem>
                 ))}
               </SelectContent>
@@ -295,11 +294,7 @@ export default function JuridicoRTs() {
                 </TableRow>
               ) : (
                 filteredVinculos.map((v) => {
-                  const st = STATUS_MAP[v.status] || STATUS_MAP.ativo;
-                  const isExpiringSoon =
-                    v.data_validade &&
-                    v.status === "ativo" &&
-                    new Date(v.data_validade + "T00:00:00") <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                  const { label, badgeClass, diasParaVencimento, computed } = v._statusInfo;
                   return (
                     <TableRow key={v.id}>
                       <TableCell className="font-medium">{v.issuers?.name || "—"}</TableCell>
@@ -314,15 +309,38 @@ export default function JuridicoRTs() {
                       </TableCell>
                       <TableCell>
                         {v.data_validade ? (
-                          <span className={isExpiringSoon ? "font-semibold text-destructive" : ""}>
-                            {format(new Date(v.data_validade + "T00:00:00"), "dd/MM/yyyy")}
-                          </span>
+                          <div>
+                            <span className={cn(
+                              "text-sm",
+                              computed === "vencido" && "font-semibold text-red-600 dark:text-red-400",
+                              computed === "a_vencer" && "font-semibold text-amber-600 dark:text-amber-400",
+                            )}>
+                              {format(new Date(v.data_validade + "T00:00:00"), "dd/MM/yyyy")}
+                            </span>
+                            {diasParaVencimento !== null && computed !== "encerrado" && (
+                              <p className={cn(
+                                "text-xs mt-0.5",
+                                computed === "vencido" && "text-red-500 dark:text-red-400",
+                                computed === "a_vencer" && "text-amber-500 dark:text-amber-400",
+                                computed === "valido" && "text-muted-foreground",
+                              )}>
+                                {computed === "vencido"
+                                  ? `Vencido há ${Math.abs(diasParaVencimento)} dia${Math.abs(diasParaVencimento) !== 1 ? "s" : ""}`
+                                  : `${diasParaVencimento} dia${diasParaVencimento !== 1 ? "s" : ""} restante${diasParaVencimento !== 1 ? "s" : ""}`}
+                              </p>
+                            )}
+                          </div>
                         ) : (
-                          "—"
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={st.variant}>{st.label}</Badge>
+                        <span className={cn(
+                          "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+                          badgeClass,
+                        )}>
+                          {label}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
