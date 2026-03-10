@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FileUp, LogOut, ChevronDown, FolderOpen, Wallet, FileText } from "lucide-react";
+import { FileUp, LogOut, ChevronDown, FolderOpen, Wallet, FileText, Gavel } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePermissions } from "@/hooks/usePermissions";
