@@ -282,6 +282,7 @@ export default function Permissions() {
         <PermissionTable rolePermissions={adminPermissions} roleLabel="Administrador" />
         <PermissionTable rolePermissions={operadorPermissions} roleLabel="Operador" />
         <PermissionTable rolePermissions={financeiroPermissions} roleLabel="Financeiro" />
+        <PermissionTable rolePermissions={juridicoPermissions} roleLabel="Jurídico" />
       </div>
     </AppLayout>
   );
