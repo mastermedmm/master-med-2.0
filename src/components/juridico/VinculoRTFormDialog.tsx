@@ -29,10 +29,8 @@ const UF_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "ativo", label: "Ativo" },
-  { value: "inativo", label: "Inativo" },
-  { value: "vencido", label: "Vencido" },
-  { value: "cancelado", label: "Cancelado" },
+  { value: "ativo", label: "Ativo (automático pela validade)" },
+  { value: "cancelado", label: "Encerrado (manual)" },
 ];
 
 type FormData = {
