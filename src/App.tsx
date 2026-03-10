@@ -52,6 +52,9 @@ import NfseDocumentos from "./pages/nfse/NfseDocumentos";
 import NfseConfiguracoes from "./pages/nfse/NfseConfiguracoes";
 import NfseTomadores from "./pages/nfse/NfseTomadores";
 
+// Juridico Pages
+import JuridicoContratos from "./pages/juridico/JuridicoContratos";
+import JuridicoRTs from "./pages/juridico/JuridicoRTs";
 // Doctor Portal Pages
 import DoctorLogin from "./pages/doctor-portal/DoctorLogin";
 import DoctorChangePassword from "./pages/doctor-portal/DoctorChangePassword";
