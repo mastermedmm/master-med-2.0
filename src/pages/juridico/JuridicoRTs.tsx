@@ -59,6 +59,7 @@ export type VinculoRT = {
 export default function JuridicoRTs() {
   useDocumentTitle("Controle de RTs");
   const { tenant } = useTenant();
+  const navigate = useNavigate();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingVinculo, setEditingVinculo] = useState<VinculoRT | null>(null);
