@@ -275,16 +275,8 @@ export default function JuridicoRTDetail() {
             <RTHistoryTab vinculoId={vinculo.id} />
           </TabsContent>
 
-          {/* Anexos */}
           <TabsContent value="anexos">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-sm font-medium text-foreground">Módulo de anexos</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Em breve será possível anexar documentos ao vínculo RT.
-                </p>
-              </div>
-            </div>
+            <RTAttachmentsTab vinculoId={vinculo.id} />
           </TabsContent>
 
           {/* Renovação */}
