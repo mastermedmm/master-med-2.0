@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { computeRTStatus } from "@/utils/rtStatusUtils";
 import { VinculoRTFormDialog } from "@/components/juridico/VinculoRTFormDialog";
 import { RTHistoryTab } from "@/components/juridico/RTHistoryTab";
+import { RTRenewalTab } from "@/components/juridico/RTRenewalTab";
+import { RTAttachmentsTab } from "@/components/juridico/RTAttachmentsTab";
 import { ROUTES } from "@/config/routes";
 import { Eye, EyeOff } from "lucide-react";
 import type { VinculoRT } from "@/pages/juridico/JuridicoRTs";
@@ -273,28 +275,16 @@ export default function JuridicoRTDetail() {
             <RTHistoryTab vinculoId={vinculo.id} />
           </TabsContent>
 
-          {/* Anexos */}
           <TabsContent value="anexos">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-sm font-medium text-foreground">Módulo de anexos</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Em breve será possível anexar documentos ao vínculo RT.
-                </p>
-              </div>
-            </div>
+            <RTAttachmentsTab vinculoId={vinculo.id} />
           </TabsContent>
 
-          {/* Renovação */}
           <TabsContent value="renovacao">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-sm font-medium text-foreground">Módulo de renovação</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Em breve será possível gerenciar renovações do vínculo RT.
-                </p>
-              </div>
-            </div>
+            <RTRenewalTab
+              vinculoId={vinculo.id}
+              dataValidadeAtual={vinculo.data_validade}
+              statusAtual={vinculo.status}
+            />
           </TabsContent>
         </Tabs>
       </div>

@@ -97,6 +97,60 @@ export type Database = {
           },
         ]
       }
+      anexos_vinculos_rt: {
+        Row: {
+          caminho_arquivo: string
+          created_at: string
+          id: string
+          nome_arquivo: string
+          tamanho_bytes: number | null
+          tenant_id: string | null
+          tipo_arquivo: string | null
+          usuario_id: string | null
+          usuario_nome: string | null
+          vinculo_rt_id: string
+        }
+        Insert: {
+          caminho_arquivo: string
+          created_at?: string
+          id?: string
+          nome_arquivo: string
+          tamanho_bytes?: number | null
+          tenant_id?: string | null
+          tipo_arquivo?: string | null
+          usuario_id?: string | null
+          usuario_nome?: string | null
+          vinculo_rt_id: string
+        }
+        Update: {
+          caminho_arquivo?: string
+          created_at?: string
+          id?: string
+          nome_arquivo?: string
+          tamanho_bytes?: number | null
+          tenant_id?: string | null
+          tipo_arquivo?: string | null
+          usuario_id?: string | null
+          usuario_nome?: string | null
+          vinculo_rt_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_vinculos_rt_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_vinculos_rt_vinculo_rt_id_fkey"
+            columns: ["vinculo_rt_id"]
+            isOneToOne: false
+            referencedRelation: "vinculos_rt"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string

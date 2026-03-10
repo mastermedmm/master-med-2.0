@@ -9,7 +9,8 @@ export type RTEventType =
   | 'edicao'
   | 'alteracao_validade'
   | 'alteracao_status'
-  | 'encerramento';
+  | 'encerramento'
+  | 'renovacao';
 
 const EVENT_LABELS: Record<RTEventType, string> = {
   criacao: 'Criação',
@@ -17,6 +18,7 @@ const EVENT_LABELS: Record<RTEventType, string> = {
   alteracao_validade: 'Alteração de validade',
   alteracao_status: 'Alteração de status',
   encerramento: 'Encerramento',
+  renovacao: 'Renovação',
 };
 
 export interface RTHistoryEvent {

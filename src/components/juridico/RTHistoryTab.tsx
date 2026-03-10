@@ -1,7 +1,7 @@
 import { useRTHistoryEvents, EVENT_LABELS } from "@/hooks/useRTHistory";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { History, Plus, Pencil, Calendar, ToggleRight, XCircle } from "lucide-react";
+import { History, Plus, Pencil, Calendar, ToggleRight, XCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const EVENT_ICONS: Record<string, typeof History> = {
@@ -10,6 +10,7 @@ const EVENT_ICONS: Record<string, typeof History> = {
   alteracao_validade: Calendar,
   alteracao_status: ToggleRight,
   encerramento: XCircle,
+  renovacao: RefreshCw,
 };
 
 const EVENT_COLORS: Record<string, string> = {
@@ -18,6 +19,7 @@ const EVENT_COLORS: Record<string, string> = {
   alteracao_validade: "text-amber-600 bg-amber-500/10 dark:text-amber-400",
   alteracao_status: "text-purple-600 bg-purple-500/10 dark:text-purple-400",
   encerramento: "text-red-600 bg-red-500/10 dark:text-red-400",
+  renovacao: "text-teal-600 bg-teal-500/10 dark:text-teal-400",
 };
 
 interface Props {
