@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,14 +9,9 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { computeRTStatus } from "@/utils/rtStatusUtils";
 import type { VinculoRT } from "@/pages/juridico/JuridicoRTs";
-
-const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  ativo: { label: "Ativo", variant: "default" },
-  inativo: { label: "Inativo", variant: "secondary" },
-  vencido: { label: "Vencido", variant: "destructive" },
-  cancelado: { label: "Cancelado", variant: "outline" },
-};
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -39,7 +33,7 @@ export function VinculoRTViewDialog({ open, onOpenChange, vinculo }: Props) {
 
   if (!vinculo) return null;
 
-  const st = STATUS_MAP[vinculo.status] || STATUS_MAP.ativo;
+  const statusInfo = computeRTStatus(vinculo.status, vinculo.data_validade);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,7 +41,12 @@ export function VinculoRTViewDialog({ open, onOpenChange, vinculo }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Detalhes do Vínculo RT
-            <Badge variant={st.variant}>{st.label}</Badge>
+            <span className={cn(
+              "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+              statusInfo.badgeClass,
+            )}>
+              {statusInfo.label}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
@@ -88,14 +87,32 @@ export function VinculoRTViewDialog({ open, onOpenChange, vinculo }: Props) {
                     : null
                 }
               />
-              <Field
-                label="Validade"
-                value={
-                  vinculo.data_validade
-                    ? format(new Date(vinculo.data_validade + "T00:00:00"), "dd/MM/yyyy")
-                    : null
-                }
-              />
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Validade</p>
+                <div>
+                  {vinculo.data_validade ? (
+                    <>
+                      <p className="text-sm text-foreground">
+                        {format(new Date(vinculo.data_validade + "T00:00:00"), "dd/MM/yyyy")}
+                      </p>
+                      {statusInfo.diasParaVencimento !== null && statusInfo.computed !== "encerrado" && (
+                        <p className={cn(
+                          "text-xs mt-0.5",
+                          statusInfo.computed === "vencido" && "text-red-500",
+                          statusInfo.computed === "a_vencer" && "text-amber-500",
+                          statusInfo.computed === "valido" && "text-muted-foreground",
+                        )}>
+                          {statusInfo.computed === "vencido"
+                            ? `Vencido há ${Math.abs(statusInfo.diasParaVencimento)} dias`
+                            : `${statusInfo.diasParaVencimento} dias restantes`}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-foreground">—</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
