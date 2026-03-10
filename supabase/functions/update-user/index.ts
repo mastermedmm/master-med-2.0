@@ -68,6 +68,55 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
+    // Action: create user
+    if (body.action === 'create') {
+      const { email, password, fullName, role } = body;
+      if (!email || !password || !fullName) {
+        return new Response(JSON.stringify({ error: 'email, password, fullName required' }), { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+
+      // Create user via admin API (no session switch)
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: fullName },
+      });
+
+      if (createError) {
+        let msg = createError.message;
+        if (msg.includes('already been registered')) msg = 'Este email já está cadastrado no sistema.';
+        return new Response(JSON.stringify({ error: msg }), { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+
+      const newUserId = newUser.user.id;
+
+      // Wait for trigger to create profile/role
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Update profile with tenant
+      await supabaseAdmin.from('profiles')
+        .update({ tenant_id: effectiveTenantId, active_tenant_id: effectiveTenantId, full_name: fullName })
+        .eq('user_id', newUserId);
+
+      // Update role and tenant
+      const validRole = role || 'operador';
+      await supabaseAdmin.from('user_roles')
+        .update({ role: validRole, tenant_id: effectiveTenantId })
+        .eq('user_id', newUserId);
+
+      return new Response(JSON.stringify({ success: true, user_id: newUserId }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+
     // Action: list users with emails for tenant
     if (body.action === 'list-emails') {
       const { data: roles } = await supabaseAdmin
