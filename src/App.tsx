@@ -307,6 +307,10 @@ function AppRoutes() {
       <Route path={ROUTES.nfse.documentos} element={<ProtectedRoute><NfseDocumentos /></ProtectedRoute>} />
       <Route path={ROUTES.nfse.configuracoes} element={<ProtectedRoute><NfseConfiguracoes /></ProtectedRoute>} />
       <Route path={ROUTES.nfse.tomadores} element={<ProtectedRoute><NfseTomadores /></ProtectedRoute>} />
+      
+      {/* Juridico Routes */}
+      <Route path={ROUTES.juridico.contratos} element={<ProtectedRoute><JuridicoContratos /></ProtectedRoute>} />
+      <Route path={ROUTES.juridico.rts} element={<ProtectedRoute><JuridicoRTs /></ProtectedRoute>} />
       {/* Doctor Portal Routes - Portuguese URLs */}
       <Route path={ROUTES.doctorPortal.login} element={<DoctorLogin />} />
       <Route path={ROUTES.doctorPortal.changePassword} element={<DoctorChangePassword />} />

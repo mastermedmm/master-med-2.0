@@ -58,6 +58,8 @@ const MODULE_LABELS: Record<ModuleName, string> = {
   'nfse.documentos': 'NFSE - Documentos',
   'nfse.configuracoes': 'NFSE - Configurações',
   'nfse.reprocessar': 'NFSE - Reprocessar',
+  'juridico.contratos': 'Jurídico - Contratos',
+  'juridico.rts': 'Jurídico - RTs',
 };
 
 const PERMISSION_LABELS = {
