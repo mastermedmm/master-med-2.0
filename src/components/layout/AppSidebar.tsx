@@ -34,6 +34,7 @@ export function AppSidebar() {
   const visibleRegistrationNav = filterNavItems(registrationNav);
   const visibleAdminNav = filterNavItems(adminNav);
   const visibleNfseNav = filterNavItems(nfseNav);
+  const visibleJuridicoNav = filterNavItems(juridicoNav);
 
   // Check if any financial route is active
   const isFinancialRouteActive = financialNav.some(
