@@ -186,7 +186,7 @@ export default function Users() {
           targetUserId: selectedUser.user_id,
           fullName: editName.trim(),
           email: editEmail.trim() || undefined,
-          role: isAdmin && selectedUser.user_id !== currentUser?.id ? editRole as 'admin' | 'operador' | 'financeiro' : undefined,
+          role: isAdmin && selectedUser.user_id !== currentUser?.id ? editRole as 'admin' | 'operador' | 'financeiro' | 'juridico' : undefined,
         },
       });
 
@@ -339,7 +339,7 @@ export default function Users() {
         const { error: roleError } = await supabase
           .from('user_roles')
           .update({ 
-            role: newUserRole as 'admin' | 'operador' | 'financeiro',
+            role: newUserRole as 'admin' | 'operador' | 'financeiro' | 'juridico',
             tenant_id: tenantId 
           })
           .eq('user_id', authData.user.id);
@@ -392,6 +392,14 @@ export default function Users() {
         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-1 text-xs font-medium text-green-700 dark:text-green-400">
           <User className="h-3 w-3" />
           Financeiro
+        </span>
+      );
+    }
+    if (role === 'juridico') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 px-2.5 py-1 text-xs font-medium text-purple-700 dark:text-purple-400">
+          <User className="h-3 w-3" />
+          Jurídico
         </span>
       );
     }
@@ -541,9 +549,10 @@ export default function Users() {
                   <SelectTrigger id="edit-role">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                   <SelectContent>
                     <SelectItem value="operador">Operador</SelectItem>
                     <SelectItem value="financeiro">Financeiro</SelectItem>
+                    <SelectItem value="juridico">Jurídico</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
                   </SelectContent>
                 </Select>
@@ -649,6 +658,7 @@ export default function Users() {
                 <SelectContent>
                   <SelectItem value="operador">Operador</SelectItem>
                   <SelectItem value="financeiro">Financeiro</SelectItem>
+                  <SelectItem value="juridico">Jurídico</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>

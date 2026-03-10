@@ -33,7 +33,7 @@ export type ModuleName =
   | 'juridico.contratos'
   | 'juridico.rts';
 
-export type AppRole = 'admin' | 'operador' | 'financeiro';
+export type AppRole = 'admin' | 'operador' | 'financeiro' | 'juridico';
 
 interface ModulePermission {
   module_name: string;

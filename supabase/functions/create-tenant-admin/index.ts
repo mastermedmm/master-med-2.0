@@ -95,6 +95,38 @@ function getDefaultPermissions(tenant_id: string) {
       ...perms,
     });
   }
+
+  // Jurídico - only juridico modules
+  const juridicoModules = {
+    'dashboard': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'import': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'allocation': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'payables': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'expenses': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'doctors': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'hospitals': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'banks': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'issuers': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'statements': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'reconciliation': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'adjustments': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'cashflow': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'users': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'permissions': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'settings': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'audit_logs': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
+    'juridico.contratos': { can_create: true, can_read: true, can_update: true, can_delete: true, can_customize: false },
+    'juridico.rts': { can_create: true, can_read: true, can_update: true, can_delete: true, can_customize: false },
+  };
+
+  for (const [module_name, perms] of Object.entries(juridicoModules)) {
+    permissions.push({
+      tenant_id,
+      role: 'juridico',
+      module_name,
+      ...perms,
+    });
+  }
   
   return permissions;
 }
