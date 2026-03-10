@@ -23,7 +23,7 @@ import {
   Handshake,
   Contact,
   FilePlus,
-  Gavel,
+  
   FileSignature,
   ShieldCheck,
   FileCheck,
