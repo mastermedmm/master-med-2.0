@@ -253,6 +253,45 @@ export function AppSidebar() {
           </div>
         )}
 
+        {/* Juridico Navigation - Collapsible */}
+        {visibleJuridicoNav.length > 0 && (
+          <div className="mb-6">
+            <Collapsible open={isJuridicoOpen} onOpenChange={setIsJuridicoOpen}>
+              <CollapsibleTrigger className="sidebar-link sidebar-link-inactive w-full justify-between group">
+                <span className="flex items-center gap-3">
+                  <Gavel className="h-5 w-5" />
+                  Jurídico
+                </span>
+                <ChevronDown 
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    isJuridicoOpen && "rotate-180"
+                  )} 
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1 ml-4 space-y-1">
+                {visibleJuridicoNav.map((item) => {
+                  const isActive = location.pathname === item.to;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "sidebar-link",
+                        isActive ? "sidebar-link-active" : "sidebar-link-inactive",
+                      )}
+                    >
+                      {Icon ? <Icon className="h-5 w-5" /> : null}
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
+
         {/* Admin Navigation */}
         {visibleAdminNav.length > 0 && (
           <div>
