@@ -351,7 +351,8 @@ export default function JuridicoRTs() {
                             variant="ghost"
                             size="icon"
                             title="Visualizar"
-                            onClick={() => setViewingVinculo(v)}
+                            onClick={() => navigate(ROUTES.juridico.rtDetail(v.id))}
+                          >
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
