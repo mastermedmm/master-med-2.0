@@ -9,7 +9,8 @@ export type RTEventType =
   | 'edicao'
   | 'alteracao_validade'
   | 'alteracao_status'
-  | 'encerramento';
+  | 'encerramento'
+  | 'renovacao';
 
 const EVENT_LABELS: Record<RTEventType, string> = {
   criacao: 'Criação',
