@@ -1,13 +1,13 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ShieldCheck, Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, Plus, Pencil, Eye, Search, X } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,25 +17,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -44,11 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-
-const UF_OPTIONS = [
-  "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
-  "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO",
-];
+import { VinculoRTFormDialog } from "@/components/juridico/VinculoRTFormDialog";
+import { VinculoRTViewDialog } from "@/components/juridico/VinculoRTViewDialog";
 
 const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   ativo: { label: "Ativo", variant: "default" },
@@ -57,7 +35,12 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
   cancelado: { label: "Cancelado", variant: "outline" },
 };
 
-type VinculoRT = {
+const UF_OPTIONS = [
+  "AC","AL","AM","AP","BA","CE","DF","ES","GO","MA","MG","MS","MT",
+  "PA","PB","PE","PI","PR","RJ","RN","RO","RR","RS","SC","SE","SP","TO",
+];
+
+export type VinculoRT = {
   id: string;
   profissional_id: string;
   empresa_id: string;
@@ -77,43 +60,20 @@ type VinculoRT = {
   issuers: { name: string; cnpj: string } | null;
 };
 
-type FormData = {
-  profissional_id: string;
-  empresa_id: string;
-  conselho_pj: string;
-  uf_conselho_pj: string;
-  registro_pj: string;
-  data_inicio_responsabilidade: string;
-  data_validade: string;
-  login_portal_conselho: string;
-  senha_portal_conselho: string;
-  observacoes: string;
-  status: string;
-};
-
-const emptyForm: FormData = {
-  profissional_id: "",
-  empresa_id: "",
-  conselho_pj: "",
-  uf_conselho_pj: "",
-  registro_pj: "",
-  data_inicio_responsabilidade: "",
-  data_validade: "",
-  login_portal_conselho: "",
-  senha_portal_conselho: "",
-  observacoes: "",
-  status: "ativo",
-};
-
 export default function JuridicoRTs() {
   useDocumentTitle("Controle de RTs");
   const { tenant } = useTenant();
-  const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormData>(emptyForm);
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingVinculo, setEditingVinculo] = useState<VinculoRT | null>(null);
+  const [viewingVinculo, setViewingVinculo] = useState<VinculoRT | null>(null);
+
+  // Filters
+  const [filterEmpresa, setFilterEmpresa] = useState<string>("all");
+  const [filterProfissional, setFilterProfissional] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterUf, setFilterUf] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch vínculos
   const { data: vinculos, isLoading } = useQuery({
@@ -123,14 +83,14 @@ export default function JuridicoRTs() {
         .from("vinculos_rt" as any)
         .select("*, doctors(name, crm), issuers(name, cnpj)")
         .eq("tenant_id", tenant?.id)
-        .order("created_at", { ascending: false });
+        .order("data_validade", { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data as unknown as VinculoRT[];
     },
     enabled: !!tenant?.id,
   });
 
-  // Fetch doctors
+  // Fetch doctors for filter
   const { data: doctors } = useQuery({
     queryKey: ["doctors_list", tenant?.id],
     queryFn: async () => {
@@ -145,7 +105,7 @@ export default function JuridicoRTs() {
     enabled: !!tenant?.id,
   });
 
-  // Fetch issuers (empresas)
+  // Fetch issuers for filter
   const { data: issuers } = useQuery({
     queryKey: ["issuers_list", tenant?.id],
     queryFn: async () => {
@@ -161,102 +121,51 @@ export default function JuridicoRTs() {
     enabled: !!tenant?.id,
   });
 
-  // Save mutation
-  const saveMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      const payload = {
-        ...data,
-        tenant_id: tenant?.id,
-        data_inicio_responsabilidade: data.data_inicio_responsabilidade || null,
-        data_validade: data.data_validade || null,
-        conselho_pj: data.conselho_pj || null,
-        uf_conselho_pj: data.uf_conselho_pj || null,
-        registro_pj: data.registro_pj || null,
-        login_portal_conselho: data.login_portal_conselho || null,
-        senha_portal_conselho: data.senha_portal_conselho || null,
-        observacoes: data.observacoes || null,
-      };
-
-      if (editingId) {
-        const { error } = await supabase
-          .from("vinculos_rt" as any)
-          .update(payload as any)
-          .eq("id", editingId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("vinculos_rt" as any)
-          .insert(payload as any);
-        if (error) throw error;
+  // Filtered and sorted data
+  const filteredVinculos = useMemo(() => {
+    if (!vinculos) return [];
+    return vinculos.filter((v) => {
+      if (filterEmpresa !== "all" && v.empresa_id !== filterEmpresa) return false;
+      if (filterProfissional !== "all" && v.profissional_id !== filterProfissional) return false;
+      if (filterStatus !== "all" && v.status !== filterStatus) return false;
+      if (filterUf !== "all" && v.uf_conselho_pj !== filterUf) return false;
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        const matchName = v.doctors?.name?.toLowerCase().includes(term);
+        const matchCrm = v.doctors?.crm?.toLowerCase().includes(term);
+        const matchEmpresa = v.issuers?.name?.toLowerCase().includes(term);
+        const matchCnpj = v.issuers?.cnpj?.toLowerCase().includes(term);
+        const matchRegistro = v.registro_pj?.toLowerCase().includes(term);
+        if (!matchName && !matchCrm && !matchEmpresa && !matchCnpj && !matchRegistro) return false;
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vinculos_rt"] });
-      toast.success(editingId ? "Vínculo atualizado!" : "Vínculo criado!");
-      handleCloseDialog();
-    },
-    onError: (err: any) => {
-      if (err?.message?.includes("idx_vinculos_rt_unique")) {
-        toast.error("Já existe um vínculo ativo entre este profissional e esta empresa.");
-      } else {
-        toast.error("Erro ao salvar: " + err.message);
-      }
-    },
-  });
+      return true;
+    });
+  }, [vinculos, filterEmpresa, filterProfissional, filterStatus, filterUf, searchTerm]);
 
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("vinculos_rt" as any)
-        .delete()
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vinculos_rt"] });
-      toast.success("Vínculo excluído!");
-      setDeleteId(null);
-    },
-    onError: (err: any) => toast.error("Erro ao excluir: " + err.message),
-  });
+  const hasActiveFilters = filterEmpresa !== "all" || filterProfissional !== "all" || filterStatus !== "all" || filterUf !== "all" || searchTerm !== "";
 
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setEditingId(null);
-    setForm(emptyForm);
+  const clearFilters = () => {
+    setFilterEmpresa("all");
+    setFilterProfissional("all");
+    setFilterStatus("all");
+    setFilterUf("all");
+    setSearchTerm("");
   };
 
   const handleEdit = (v: VinculoRT) => {
-    setEditingId(v.id);
-    setForm({
-      profissional_id: v.profissional_id,
-      empresa_id: v.empresa_id,
-      conselho_pj: v.conselho_pj || "",
-      uf_conselho_pj: v.uf_conselho_pj || "",
-      registro_pj: v.registro_pj || "",
-      data_inicio_responsabilidade: v.data_inicio_responsabilidade || "",
-      data_validade: v.data_validade || "",
-      login_portal_conselho: v.login_portal_conselho || "",
-      senha_portal_conselho: v.senha_portal_conselho || "",
-      observacoes: v.observacoes || "",
-      status: v.status,
-    });
-    setDialogOpen(true);
+    setEditingVinculo(v);
+    setFormOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.profissional_id || !form.empresa_id) {
-      toast.error("Selecione o profissional e a empresa.");
-      return;
-    }
-    saveMutation.mutate(form);
+  const handleNew = () => {
+    setEditingVinculo(null);
+    setFormOpen(true);
   };
 
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <ShieldCheck className="h-8 w-8 text-primary" />
@@ -269,10 +178,80 @@ export default function JuridicoRTs() {
               </p>
             </div>
           </div>
-          <Button onClick={() => { setForm(emptyForm); setEditingId(null); setDialogOpen(true); }}>
+          <Button onClick={handleNew}>
             <Plus className="mr-2 h-4 w-4" />
-            Novo Vínculo
+            Novo Vínculo RT
           </Button>
+        </div>
+
+        {/* Filters */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterEmpresa} onValueChange={setFilterEmpresa}>
+              <SelectTrigger>
+                <SelectValue placeholder="Empresa" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as empresas</SelectItem>
+                {issuers?.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterProfissional} onValueChange={setFilterProfissional}>
+              <SelectTrigger>
+                <SelectValue placeholder="Profissional" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os profissionais</SelectItem>
+                {doctors?.map((d) => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                {Object.entries(STATUS_MAP).map(([key, { label }]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterUf} onValueChange={setFilterUf}>
+              <SelectTrigger>
+                <SelectValue placeholder="UF" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as UFs</SelectItem>
+                {UF_OPTIONS.map((uf) => (
+                  <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {hasActiveFilters && (
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {filteredVinculos.length} resultado{filteredVinculos.length !== 1 ? "s" : ""}
+              </span>
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="mr-1 h-3 w-3" />
+                Limpar filtros
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Table */}
@@ -280,12 +259,12 @@ export default function JuridicoRTs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Profissional</TableHead>
                 <TableHead>Empresa</TableHead>
-                <TableHead>Conselho PJ</TableHead>
-                <TableHead>UF</TableHead>
+                <TableHead>CNPJ</TableHead>
+                <TableHead>Profissional</TableHead>
+                <TableHead>CRM</TableHead>
                 <TableHead>Registro PJ</TableHead>
-                <TableHead>Início</TableHead>
+                <TableHead>Conselho</TableHead>
                 <TableHead>Validade</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -293,55 +272,75 @@ export default function JuridicoRTs() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 3 }).map((_, i) => (
+                Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
                     {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
-              ) : !vinculos?.length ? (
+              ) : !filteredVinculos.length ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    Nenhum vínculo RT cadastrado.
+                  <TableCell colSpan={9} className="py-12 text-center">
+                    <ShieldCheck className="mx-auto h-10 w-10 text-muted-foreground/40" />
+                    <p className="mt-3 text-sm font-medium text-foreground">
+                      {hasActiveFilters ? "Nenhum resultado encontrado" : "Nenhum vínculo RT cadastrado"}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {hasActiveFilters
+                        ? "Tente ajustar os filtros para encontrar o que procura."
+                        : "Clique em \"Novo Vínculo RT\" para começar."}
+                    </p>
                   </TableCell>
                 </TableRow>
               ) : (
-                vinculos.map((v) => {
+                filteredVinculos.map((v) => {
                   const st = STATUS_MAP[v.status] || STATUS_MAP.ativo;
+                  const isExpiringSoon =
+                    v.data_validade &&
+                    v.status === "ativo" &&
+                    new Date(v.data_validade + "T00:00:00") <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
                   return (
                     <TableRow key={v.id}>
-                      <TableCell>
-                        <div className="font-medium">{v.doctors?.name}</div>
-                        <div className="text-xs text-muted-foreground">CRM: {v.doctors?.crm}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{v.issuers?.name}</div>
-                        <div className="text-xs text-muted-foreground">{v.issuers?.cnpj}</div>
-                      </TableCell>
-                      <TableCell>{v.conselho_pj || "—"}</TableCell>
-                      <TableCell>{v.uf_conselho_pj || "—"}</TableCell>
+                      <TableCell className="font-medium">{v.issuers?.name || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-mono">{v.issuers?.cnpj || "—"}</TableCell>
+                      <TableCell className="font-medium">{v.doctors?.name || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{v.doctors?.crm || "—"}</TableCell>
                       <TableCell>{v.registro_pj || "—"}</TableCell>
                       <TableCell>
-                        {v.data_inicio_responsabilidade
-                          ? format(new Date(v.data_inicio_responsabilidade + "T00:00:00"), "dd/MM/yyyy")
+                        {v.conselho_pj
+                          ? `${v.conselho_pj}${v.uf_conselho_pj ? `/${v.uf_conselho_pj}` : ""}`
                           : "—"}
                       </TableCell>
                       <TableCell>
-                        {v.data_validade
-                          ? format(new Date(v.data_validade + "T00:00:00"), "dd/MM/yyyy")
-                          : "—"}
+                        {v.data_validade ? (
+                          <span className={isExpiringSoon ? "font-semibold text-destructive" : ""}>
+                            {format(new Date(v.data_validade + "T00:00:00"), "dd/MM/yyyy")}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={st.variant}>{st.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(v)}>
-                            <Pencil className="h-4 w-4" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Visualizar"
+                            onClick={() => setViewingVinculo(v)}
+                          >
+                            <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(v.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Editar"
+                            onClick={() => handleEdit(v)}
+                          >
+                            <Pencil className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -352,153 +351,27 @@ export default function JuridicoRTs() {
             </TableBody>
           </Table>
         </div>
-
-        {/* Create/Edit Dialog */}
-        <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); }}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Editar Vínculo RT" : "Novo Vínculo RT"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Profissional *</Label>
-                  <Select value={form.profissional_id} onValueChange={(v) => setForm({ ...form, profissional_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {doctors?.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name} (CRM: {d.crm})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Empresa *</Label>
-                  <Select value={form.empresa_id} onValueChange={(v) => setForm({ ...form, empresa_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {issuers?.map((i) => (
-                        <SelectItem key={i.id} value={i.id}>
-                          {i.name} ({i.cnpj})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Conselho PJ</Label>
-                  <Input value={form.conselho_pj} onChange={(e) => setForm({ ...form, conselho_pj: e.target.value })} placeholder="Ex: CRMV, CRO..." />
-                </div>
-                <div className="space-y-2">
-                  <Label>UF Conselho</Label>
-                  <Select value={form.uf_conselho_pj} onValueChange={(v) => setForm({ ...form, uf_conselho_pj: v })}>
-                    <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-                    <SelectContent>
-                      {UF_OPTIONS.map((uf) => (
-                        <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Registro PJ</Label>
-                  <Input value={form.registro_pj} onChange={(e) => setForm({ ...form, registro_pj: e.target.value })} placeholder="Nº registro" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Início Responsabilidade</Label>
-                  <Input type="date" value={form.data_inicio_responsabilidade} onChange={(e) => setForm({ ...form, data_inicio_responsabilidade: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Validade</Label>
-                  <Input type="date" value={form.data_validade} onChange={(e) => setForm({ ...form, data_validade: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(STATUS_MAP).map(([key, { label }]) => (
-                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Login Portal Conselho</Label>
-                  <Input value={form.login_portal_conselho} onChange={(e) => setForm({ ...form, login_portal_conselho: e.target.value })} placeholder="Login" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Senha Portal Conselho</Label>
-                  <div className="relative">
-                    <Input
-                      type={showPasswords["form"] ? "text" : "password"}
-                      value={form.senha_portal_conselho}
-                      onChange={(e) => setForm({ ...form, senha_portal_conselho: e.target.value })}
-                      placeholder="Senha"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowPasswords((p) => ({ ...p, form: !p.form }))}
-                    >
-                      {showPasswords["form"] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={form.observacoes}
-                  onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-                  placeholder="Observações gerais sobre o vínculo..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
-                <Button type="submit" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Salvando..." : "Salvar"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation */}
-        <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Excluir vínculo RT?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. O vínculo será removido permanentemente.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => deleteId && deleteMutation.mutate(deleteId)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
+
+      {/* Dialogs */}
+      <VinculoRTFormDialog
+        open={formOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setFormOpen(false);
+            setEditingVinculo(null);
+          }
+        }}
+        vinculo={editingVinculo}
+        doctors={doctors || []}
+        issuers={issuers || []}
+      />
+
+      <VinculoRTViewDialog
+        open={!!viewingVinculo}
+        onOpenChange={(open) => { if (!open) setViewingVinculo(null); }}
+        vinculo={viewingVinculo}
+      />
     </AppLayout>
   );
 }
