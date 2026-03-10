@@ -1,5 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ShieldCheck, Plus, Pencil, Eye, Search, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/config/routes";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
