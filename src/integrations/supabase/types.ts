@@ -878,6 +878,60 @@ export type Database = {
           },
         ]
       }
+      historico_vinculos_rt: {
+        Row: {
+          created_at: string
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          descricao: string
+          id: string
+          tenant_id: string | null
+          tipo_evento: string
+          usuario_id: string | null
+          usuario_nome: string | null
+          vinculo_rt_id: string
+        }
+        Insert: {
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao: string
+          id?: string
+          tenant_id?: string | null
+          tipo_evento: string
+          usuario_id?: string | null
+          usuario_nome?: string | null
+          vinculo_rt_id: string
+        }
+        Update: {
+          created_at?: string
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          descricao?: string
+          id?: string
+          tenant_id?: string | null
+          tipo_evento?: string
+          usuario_id?: string | null
+          usuario_nome?: string | null
+          vinculo_rt_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_vinculos_rt_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_vinculos_rt_vinculo_rt_id_fkey"
+            columns: ["vinculo_rt_id"]
+            isOneToOne: false
+            referencedRelation: "vinculos_rt"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hospitals: {
         Row: {
           created_at: string
