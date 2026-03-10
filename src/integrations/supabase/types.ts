@@ -2677,7 +2677,7 @@ export type Database = {
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "operador" | "financeiro"
+      app_role: "admin" | "operador" | "financeiro" | "juridico"
       nfse_documento_tipo:
         | "xml_nfse"
         | "xml_dps"
@@ -2848,7 +2848,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operador", "financeiro"],
+      app_role: ["admin", "operador", "financeiro", "juridico"],
       nfse_documento_tipo: [
         "xml_nfse",
         "xml_dps",
