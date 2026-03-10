@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { computeRTStatus } from "@/utils/rtStatusUtils";
 import { VinculoRTFormDialog } from "@/components/juridico/VinculoRTFormDialog";
 import { RTHistoryTab } from "@/components/juridico/RTHistoryTab";
+import { RTRenewalTab } from "@/components/juridico/RTRenewalTab";
+import { RTAttachmentsTab } from "@/components/juridico/RTAttachmentsTab";
 import { ROUTES } from "@/config/routes";
 import { Eye, EyeOff } from "lucide-react";
 import type { VinculoRT } from "@/pages/juridico/JuridicoRTs";
