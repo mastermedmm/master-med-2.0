@@ -186,7 +186,7 @@ export default function Users() {
           targetUserId: selectedUser.user_id,
           fullName: editName.trim(),
           email: editEmail.trim() || undefined,
-          role: isAdmin && selectedUser.user_id !== currentUser?.id ? editRole as 'admin' | 'operador' | 'financeiro' : undefined,
+          role: isAdmin && selectedUser.user_id !== currentUser?.id ? editRole as 'admin' | 'operador' | 'financeiro' | 'juridico' : undefined,
         },
       });
 
