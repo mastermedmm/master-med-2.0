@@ -40,6 +40,12 @@ export const ROUTES = {
     tomadores: '/nfse/tomadores',
   },
   
+  // Jurídico
+  juridico: {
+    contratos: '/juridico/contratos',
+    rts: '/juridico/rts',
+  },
+  
   // Portal do Médico
   doctorPortal: {
     root: '/portal-medico',

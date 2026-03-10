@@ -29,7 +29,9 @@ export type ModuleName =
   | 'nfse.sincronizacao'
   | 'nfse.documentos'
   | 'nfse.configuracoes'
-  | 'nfse.reprocessar';
+  | 'nfse.reprocessar'
+  | 'juridico.contratos'
+  | 'juridico.rts';
 
 export type AppRole = 'admin' | 'operador' | 'financeiro';
 
