@@ -1,7 +1,7 @@
 import { useRTHistoryEvents, EVENT_LABELS } from "@/hooks/useRTHistory";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { History, Plus, Pencil, Calendar, ToggleRight, XCircle } from "lucide-react";
+import { History, Plus, Pencil, Calendar, ToggleRight, XCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const EVENT_ICONS: Record<string, typeof History> = {
