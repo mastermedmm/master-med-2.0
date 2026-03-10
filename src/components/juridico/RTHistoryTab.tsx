@@ -10,6 +10,7 @@ const EVENT_ICONS: Record<string, typeof History> = {
   alteracao_validade: Calendar,
   alteracao_status: ToggleRight,
   encerramento: XCircle,
+  renovacao: RefreshCw,
 };
 
 const EVENT_COLORS: Record<string, string> = {
