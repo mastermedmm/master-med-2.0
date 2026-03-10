@@ -353,7 +353,6 @@ export default function JuridicoRTs() {
                             title="Visualizar"
                             onClick={() => navigate(ROUTES.juridico.rtDetail(v.id))}
                           >
-                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
