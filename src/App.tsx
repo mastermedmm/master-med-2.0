@@ -52,6 +52,9 @@ import NfseDocumentos from "./pages/nfse/NfseDocumentos";
 import NfseConfiguracoes from "./pages/nfse/NfseConfiguracoes";
 import NfseTomadores from "./pages/nfse/NfseTomadores";
 
+// Juridico Pages
+import JuridicoContratos from "./pages/juridico/JuridicoContratos";
+import JuridicoRTs from "./pages/juridico/JuridicoRTs";
 // Doctor Portal Pages
 import DoctorLogin from "./pages/doctor-portal/DoctorLogin";
 import DoctorChangePassword from "./pages/doctor-portal/DoctorChangePassword";
@@ -304,6 +307,10 @@ function AppRoutes() {
       <Route path={ROUTES.nfse.documentos} element={<ProtectedRoute><NfseDocumentos /></ProtectedRoute>} />
       <Route path={ROUTES.nfse.configuracoes} element={<ProtectedRoute><NfseConfiguracoes /></ProtectedRoute>} />
       <Route path={ROUTES.nfse.tomadores} element={<ProtectedRoute><NfseTomadores /></ProtectedRoute>} />
+      
+      {/* Juridico Routes */}
+      <Route path={ROUTES.juridico.contratos} element={<ProtectedRoute><JuridicoContratos /></ProtectedRoute>} />
+      <Route path={ROUTES.juridico.rts} element={<ProtectedRoute><JuridicoRTs /></ProtectedRoute>} />
       {/* Doctor Portal Routes - Portuguese URLs */}
       <Route path={ROUTES.doctorPortal.login} element={<DoctorLogin />} />
       <Route path={ROUTES.doctorPortal.changePassword} element={<DoctorChangePassword />} />

@@ -23,6 +23,9 @@ import {
   Handshake,
   Contact,
   FilePlus,
+  
+  FileSignature,
+  ShieldCheck,
   FileCheck,
   AlertTriangle,
   ClipboardList,
@@ -83,4 +86,9 @@ export const nfseNav: AppNavItem[] = [
   { label: "Tomadores", to: ROUTES.nfse.tomadores, icon: Contact, module: "nfse.emitir" },
 ];
 
-export const topNav: AppNavItem[] = [...primaryNav, ...financialNav, ...registrationNav, ...adminNav, ...nfseNav];
+export const juridicoNav: AppNavItem[] = [
+  { label: "Controle de Contratos", to: ROUTES.juridico.contratos, icon: FileSignature, module: "juridico.contratos" },
+  { label: "Controle de RTs", to: ROUTES.juridico.rts, icon: ShieldCheck, module: "juridico.rts" },
+];
+
+export const topNav: AppNavItem[] = [...primaryNav, ...financialNav, ...registrationNav, ...adminNav, ...nfseNav, ...juridicoNav];

@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FileUp, LogOut, ChevronDown, FolderOpen, Wallet, FileText } from "lucide-react";
+import { FileUp, LogOut, ChevronDown, FolderOpen, Wallet, FileText, Gavel } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
-import { primaryNav, financialNav, registrationNav, adminNav, nfseNav, type AppNavItem } from "@/config/navigation";
+import { primaryNav, financialNav, registrationNav, adminNav, nfseNav, juridicoNav, type AppNavItem } from "@/config/navigation";
 import {
   Collapsible,
   CollapsibleContent,
@@ -34,6 +34,7 @@ export function AppSidebar() {
   const visibleRegistrationNav = filterNavItems(registrationNav);
   const visibleAdminNav = filterNavItems(adminNav);
   const visibleNfseNav = filterNavItems(nfseNav);
+  const visibleJuridicoNav = filterNavItems(juridicoNav);
 
   // Check if any financial route is active
   const isFinancialRouteActive = financialNav.some(
@@ -50,9 +51,15 @@ export function AppSidebar() {
     item => location.pathname === item.to
   );
 
+  // Check if any Juridico route is active
+  const isJuridicoRouteActive = juridicoNav.some(
+    item => location.pathname === item.to
+  );
+
   const [isFinancialOpen, setIsFinancialOpen] = useState(isFinancialRouteActive);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(isRegistrationRouteActive);
   const [isNfseOpen, setIsNfseOpen] = useState(isNfseRouteActive);
+  const [isJuridicoOpen, setIsJuridicoOpen] = useState(isJuridicoRouteActive);
 
   // Keep menu open when navigating to a financial route
   useEffect(() => {
@@ -74,6 +81,13 @@ export function AppSidebar() {
       setIsNfseOpen(true);
     }
   }, [isNfseRouteActive]);
+
+  // Keep menu open when navigating to a Juridico route
+  useEffect(() => {
+    if (isJuridicoRouteActive) {
+      setIsJuridicoOpen(true);
+    }
+  }, [isJuridicoRouteActive]);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar">
@@ -218,6 +232,45 @@ export function AppSidebar() {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-1 ml-4 space-y-1">
                 {visibleNfseNav.map((item) => {
+                  const isActive = location.pathname === item.to;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "sidebar-link",
+                        isActive ? "sidebar-link-active" : "sidebar-link-inactive",
+                      )}
+                    >
+                      {Icon ? <Icon className="h-5 w-5" /> : null}
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        )}
+
+        {/* Juridico Navigation - Collapsible */}
+        {visibleJuridicoNav.length > 0 && (
+          <div className="mb-6">
+            <Collapsible open={isJuridicoOpen} onOpenChange={setIsJuridicoOpen}>
+              <CollapsibleTrigger className="sidebar-link sidebar-link-inactive w-full justify-between group">
+                <span className="flex items-center gap-3">
+                  <Gavel className="h-5 w-5" />
+                  Jurídico
+                </span>
+                <ChevronDown 
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-200",
+                    isJuridicoOpen && "rotate-180"
+                  )} 
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-1 ml-4 space-y-1">
+                {visibleJuridicoNav.map((item) => {
                   const isActive = location.pathname === item.to;
                   const Icon = item.icon;
                   return (
