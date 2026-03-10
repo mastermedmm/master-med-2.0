@@ -51,9 +51,15 @@ export function AppSidebar() {
     item => location.pathname === item.to
   );
 
+  // Check if any Juridico route is active
+  const isJuridicoRouteActive = juridicoNav.some(
+    item => location.pathname === item.to
+  );
+
   const [isFinancialOpen, setIsFinancialOpen] = useState(isFinancialRouteActive);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(isRegistrationRouteActive);
   const [isNfseOpen, setIsNfseOpen] = useState(isNfseRouteActive);
+  const [isJuridicoOpen, setIsJuridicoOpen] = useState(isJuridicoRouteActive);
 
   // Keep menu open when navigating to a financial route
   useEffect(() => {
