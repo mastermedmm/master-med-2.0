@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTenant } from "@/contexts/TenantContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
-import { primaryNav, financialNav, registrationNav, adminNav, nfseNav, type AppNavItem } from "@/config/navigation";
+import { primaryNav, financialNav, registrationNav, adminNav, nfseNav, juridicoNav, type AppNavItem } from "@/config/navigation";
 import {
   Collapsible,
   CollapsibleContent,
