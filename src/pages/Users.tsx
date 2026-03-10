@@ -395,6 +395,14 @@ export default function Users() {
         </span>
       );
     }
+    if (role === 'juridico') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 px-2.5 py-1 text-xs font-medium text-purple-700 dark:text-purple-400">
+          <User className="h-3 w-3" />
+          Jurídico
+        </span>
+      );
+    }
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
         <User className="h-3 w-3" />
