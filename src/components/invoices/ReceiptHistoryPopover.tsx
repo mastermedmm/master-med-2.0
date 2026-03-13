@@ -90,6 +90,7 @@ export function ReceiptHistoryPopover({
           adjustment_amount,
           adjustment_reason,
           bank_id,
+          imported_transaction_id,
           banks (name)
         `)
         .eq('invoice_id', invoiceId)
