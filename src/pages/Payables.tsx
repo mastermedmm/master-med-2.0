@@ -24,7 +24,7 @@ import { useAuditLog } from '@/hooks/useAuditLog';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   CreditCard, Clock, CheckCircle, Ban, Loader2, XCircle, Settings2, 
-  MoreHorizontal, GripVertical, Filter, CalendarIcon, X, Eye
+  MoreHorizontal, GripVertical, Filter, CalendarIcon, X, Eye, Landmark
 } from 'lucide-react';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
