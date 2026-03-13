@@ -400,7 +400,7 @@ export function useImportedTransactions() {
 
       if (txError) throw txError;
 
-      toast.success('Lançamento criado com sucesso');
+      toast.success('Lançamento criado e conciliado com sucesso');
       return true;
     } catch (error) {
       console.error('Error creating record:', error);
