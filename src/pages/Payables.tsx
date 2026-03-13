@@ -421,7 +421,7 @@ export default function Payables() {
         .select(`
             *,
             invoices (company_name, hospital_name, invoice_number, gross_value, total_deductions, net_value, iss_value, issue_date, hospital_id, hospitals (document, payer_cnpj_1, payer_cnpj_2)),
-            doctors (name, cpf, crm, aliquota)
+            doctors (name, cpf, crm, aliquota, bank_name, bank_agency, bank_account, pix_key)
           `)
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false }),
