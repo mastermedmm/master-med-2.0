@@ -351,7 +351,7 @@ export function useImportedTransactions() {
             description: description || 'Despesa importada',
             supplier: source || null,
             status: 'pago',
-            paid_at: nowBrasilia(),
+            paid_at: transactionDate,
             bank_id: bankId,
             created_by: user.id,
           })
@@ -545,7 +545,7 @@ export function useImportedTransactions() {
         .from('accounts_payable')
         .update({
           status: isFullyPaid ? 'pago' : 'parcialmente_pago',
-          paid_at: isFullyPaid ? nowBrasilia() : null,
+          paid_at: isFullyPaid ? transactionDate : null,
         })
         .eq('id', payableId);
 
