@@ -1582,9 +1582,9 @@ export default function Payables() {
                   <p className="text-sm text-muted-foreground">Conta</p>
                   <p className="font-medium">{bankInfoPayable.doctors.bank_account || '—'}</p>
                 </div>
-                <div>
+                <div className="col-span-2">
                   <p className="text-sm text-muted-foreground">Chave PIX</p>
-                  <p className="font-medium">{bankInfoPayable.doctors.pix_key || '—'}</p>
+                  <p className="font-medium break-all">{bankInfoPayable.doctors.pix_key || '—'}</p>
                 </div>
               </div>
             </div>
