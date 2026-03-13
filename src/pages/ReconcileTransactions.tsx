@@ -205,6 +205,13 @@ export default function ReconcileTransactions() {
     }
   };
 
+  const handleRevertIgnored = async (transaction: ImportedTransaction) => {
+    const success = await revertIgnored(transaction.id);
+    if (success) {
+      loadTransactions();
+    }
+  };
+
   const openClassifyDialog = (transaction: ImportedTransaction) => {
     setCurrentTransaction(transaction);
     setClassifyCategoryId('');
