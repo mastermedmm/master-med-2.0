@@ -33,6 +33,7 @@ interface Receipt {
   adjustment_amount: number;
   adjustment_reason: string | null;
   bank_id: string;
+  imported_transaction_id: string | null;
   banks: {
     name: string;
   };
