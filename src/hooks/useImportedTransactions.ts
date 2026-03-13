@@ -604,145 +604,138 @@ export function useImportedTransactions() {
           if (error) throw error;
         }
       } else if (transaction.reconciled_with_type === 'expense') {
-          // Reset expense to pending
+        // Reset expense to pending
+        const { error } = await supabase
+          .from('expenses')
+          .update({
+            status: 'pendente',
+            bank_id: null,
+            paid_at: null,
+            notes: `[ESTORNO CONCILIAÇÃO] ${reason}`,
+          })
+          .eq('id', transaction.reconciled_with_id);
+        if (error) throw error;
+      } else if (transaction.reconciled_with_type === 'invoice') {
+        // Find and reverse the most recent active receipt for this transaction
+        const { data: receipt, error: findReceiptError } = await supabase
+          .from('invoice_receipts')
+          .select('id, amount, invoice_id')
+          .eq('imported_transaction_id', transaction.id)
+          .is('reversed_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (findReceiptError) throw findReceiptError;
+
+        if (receipt) {
+          const { error: reverseReceiptError } = await supabase
+            .from('invoice_receipts')
+            .update({
+              reversed_at: nowBrasilia(),
+              reversed_by: user.id,
+              reversal_reason: `[ESTORNO CONCILIAÇÃO] ${reason}`,
+            })
+            .eq('id', receipt.id);
+
+          if (reverseReceiptError) throw reverseReceiptError;
+
+          const { data: remainingReceipts } = await supabase
+            .from('invoice_receipts')
+            .select('amount')
+            .eq('invoice_id', receipt.invoice_id)
+            .is('reversed_at', null);
+
+          const { data: invoiceData } = await supabase
+            .from('invoices')
+            .select('net_value')
+            .eq('id', receipt.invoice_id)
+            .single();
+
+          const newTotalReceived = (remainingReceipts || []).reduce((sum, r) => sum + Number(r.amount), 0);
+          const netValue = Number(invoiceData?.net_value || 0);
+          
+          let newStatus: 'pendente' | 'parcialmente_recebido' | 'recebido' = 'pendente';
+          if (newTotalReceived > 0) {
+            newStatus = Math.abs(newTotalReceived - netValue) < 0.01 || newTotalReceived >= netValue
+              ? 'recebido'
+              : 'parcialmente_recebido';
+          }
+
+          const { error: invoiceUpdateError } = await supabase
+            .from('invoices')
+            .update({
+              status: newStatus,
+              total_received: newTotalReceived,
+              receipt_date: newStatus === 'recebido' ? todayBrasilia() : null,
+              bank_id: newStatus === 'pendente' ? null : undefined,
+            })
+            .eq('id', receipt.invoice_id);
+
+          if (invoiceUpdateError) throw invoiceUpdateError;
+        } else {
           const { error } = await supabase
-            .from('expenses')
+            .from('invoices')
             .update({
               status: 'pendente',
               bank_id: null,
-              paid_at: null,
-              notes: `[ESTORNO CONCILIAÇÃO] ${reason}`,
+              receipt_date: null,
+              total_received: 0,
             })
             .eq('id', transaction.reconciled_with_id);
           if (error) throw error;
-        } else if (transaction.reconciled_with_type === 'invoice') {
-          // Find and reverse the most recent active receipt for this transaction
-          const { data: receipt, error: findReceiptError } = await supabase
-            .from('invoice_receipts')
-            .select('id, amount, invoice_id')
-            .eq('imported_transaction_id', transaction.id)
-            .is('reversed_at', null)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        }
+      } else if (transaction.reconciled_with_type === 'payable') {
+        const { data: payment, error: findError } = await supabase
+          .from('payments')
+          .select('id, amount, account_payable_id')
+          .eq('account_payable_id', transaction.reconciled_with_id)
+          .is('reversed_at', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
 
-          if (findReceiptError) throw findReceiptError;
+        if (findError && findError.code !== 'PGRST116') throw findError;
 
-          if (receipt) {
-            // Mark receipt as reversed
-            const { error: reverseReceiptError } = await supabase
-              .from('invoice_receipts')
-              .update({
-                reversed_at: nowBrasilia(),
-                reversed_by: user.id,
-                reversal_reason: `[ESTORNO CONCILIAÇÃO] ${reason}`,
-              })
-              .eq('id', receipt.id);
-
-            if (reverseReceiptError) throw reverseReceiptError;
-
-            // Recalculate invoice total_received and status
-            const { data: remainingReceipts } = await supabase
-              .from('invoice_receipts')
-              .select('amount')
-              .eq('invoice_id', receipt.invoice_id)
-              .is('reversed_at', null);
-
-            const { data: invoiceData } = await supabase
-              .from('invoices')
-              .select('net_value')
-              .eq('id', receipt.invoice_id)
-              .single();
-
-            const newTotalReceived = (remainingReceipts || []).reduce((sum, r) => sum + Number(r.amount), 0);
-            const netValue = Number(invoiceData?.net_value || 0);
-            
-            let newStatus: 'pendente' | 'parcialmente_recebido' | 'recebido' = 'pendente';
-            if (newTotalReceived > 0) {
-              newStatus = Math.abs(newTotalReceived - netValue) < 0.01 || newTotalReceived >= netValue
-                ? 'recebido'
-                : 'parcialmente_recebido';
-            }
-
-            const { error: invoiceUpdateError } = await supabase
-              .from('invoices')
-              .update({
-                status: newStatus,
-                total_received: newTotalReceived,
-                receipt_date: newStatus === 'recebido' ? todayBrasilia() : null,
-                bank_id: newStatus === 'pendente' ? null : undefined,
-              })
-              .eq('id', receipt.invoice_id);
-
-            if (invoiceUpdateError) throw invoiceUpdateError;
-          } else {
-            // Fallback: if no receipt found, just reset invoice (legacy behavior)
-            const { error } = await supabase
-              .from('invoices')
-              .update({
-                status: 'pendente',
-                bank_id: null,
-                receipt_date: null,
-                total_received: 0,
-              })
-              .eq('id', transaction.reconciled_with_id);
-            if (error) throw error;
-          }
-        } else if (transaction.reconciled_with_type === 'payable') {
-          // Reverse the most recent active payment
-          const { data: payment, error: findError } = await supabase
+        if (payment) {
+          const { error: reverseError } = await supabase
             .from('payments')
-            .select('id, amount, account_payable_id')
-            .eq('account_payable_id', transaction.reconciled_with_id)
-            .is('reversed_at', null)
-            .order('created_at', { ascending: false })
-            .limit(1)
+            .update({
+              reversed_at: nowBrasilia(),
+              reversed_by: user.id,
+              reversal_reason: `[ESTORNO CONCILIAÇÃO] ${reason}`,
+            })
+            .eq('id', payment.id);
+
+          if (reverseError) throw reverseError;
+
+          const { data: remainingPayments } = await supabase
+            .from('payments')
+            .select('amount')
+            .eq('account_payable_id', payment.account_payable_id)
+            .is('reversed_at', null);
+
+          const { data: payable } = await supabase
+            .from('accounts_payable')
+            .select('amount_to_pay')
+            .eq('id', payment.account_payable_id)
             .single();
 
-          if (findError && findError.code !== 'PGRST116') throw findError;
-
-          if (payment) {
-            // Mark payment as reversed
-            const { error: reverseError } = await supabase
-              .from('payments')
-              .update({
-                reversed_at: nowBrasilia(),
-                reversed_by: user.id,
-                reversal_reason: `[ESTORNO CONCILIAÇÃO] ${reason}`,
-              })
-              .eq('id', payment.id);
-
-            if (reverseError) throw reverseError;
-
-            // Recalculate payable status
-            const { data: remainingPayments } = await supabase
-              .from('payments')
-              .select('amount')
-              .eq('account_payable_id', payment.account_payable_id)
-              .is('reversed_at', null);
-
-            const { data: payable } = await supabase
-              .from('accounts_payable')
-              .select('amount_to_pay')
-              .eq('id', payment.account_payable_id)
-              .single();
-
-            const totalPaid = (remainingPayments || []).reduce((sum, p) => sum + Number(p.amount), 0);
-            let newStatus: 'pendente' | 'parcialmente_pago' | 'pago' = 'pendente';
-            if (totalPaid > 0 && payable) {
-              newStatus = Math.abs(totalPaid - Number(payable.amount_to_pay)) < 0.01 ? 'pago' : 'parcialmente_pago';
-            }
-
-            const { error: statusError } = await supabase
-              .from('accounts_payable')
-              .update({
-                status: newStatus,
-                paid_at: newStatus === 'pago' ? nowBrasilia() : null,
-              })
-              .eq('id', payment.account_payable_id);
-
-            if (statusError) throw statusError;
+          const totalPaid = (remainingPayments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+          let newStatus: 'pendente' | 'parcialmente_pago' | 'pago' = 'pendente';
+          if (totalPaid > 0 && payable) {
+            newStatus = Math.abs(totalPaid - Number(payable.amount_to_pay)) < 0.01 ? 'pago' : 'parcialmente_pago';
           }
+
+          const { error: statusError } = await supabase
+            .from('accounts_payable')
+            .update({
+              status: newStatus,
+              paid_at: newStatus === 'pago' ? nowBrasilia() : null,
+            })
+            .eq('id', payment.account_payable_id);
+
+          if (statusError) throw statusError;
         }
       }
 
