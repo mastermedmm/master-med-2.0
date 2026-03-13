@@ -489,7 +489,7 @@ export default function ReconcileTransactions() {
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="pendente">Pendentes</SelectItem>
                     <SelectItem value="conciliado">Conciliados</SelectItem>
-                    <SelectItem value="criado">Criados</SelectItem>
+                    
                     <SelectItem value="ignorado">Ignorados</SelectItem>
                   </SelectContent>
                 </Select>

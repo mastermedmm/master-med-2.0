@@ -744,21 +744,6 @@ export function useImportedTransactions() {
             if (statusError) throw statusError;
           }
         }
-      } else if (transaction.status === 'criado') {
-        // Delete the created record
-        if (transaction.created_record_type === 'expense') {
-          const { error } = await supabase
-            .from('expenses')
-            .delete()
-            .eq('id', transaction.created_record_id);
-          if (error) throw error;
-        } else if (transaction.created_record_type === 'revenue') {
-          const { error } = await supabase
-            .from('revenues')
-            .delete()
-            .eq('id', transaction.created_record_id);
-          if (error) throw error;
-        }
       }
 
       // Reset imported_transaction to pending
