@@ -31,7 +31,11 @@ import {
   Filter,
   FileText,
   Undo2,
+  CalendarIcon,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -82,6 +86,8 @@ export default function ReconcileTransactions() {
   const [filterBank, setFilterBank] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('pendente');
   const [filterImport, setFilterImport] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState<Date | undefined>(undefined);
+  const [filterEndDate, setFilterEndDate] = useState<Date | undefined>(undefined);
   
   // Classification dialog
   const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
@@ -134,10 +140,12 @@ export default function ReconcileTransactions() {
 
   // Load transactions
   const loadTransactions = useCallback(async () => {
-    const filters: { bankId?: string; importId?: string; status?: string } = {};
+    const filters: { bankId?: string; importId?: string; status?: string; startDate?: string; endDate?: string } = {};
     if (filterBank !== 'all') filters.bankId = filterBank;
     if (filterImport !== 'all') filters.importId = filterImport;
     if (filterStatus !== 'all') filters.status = filterStatus;
+    if (filterStartDate) filters.startDate = format(filterStartDate, 'yyyy-MM-dd');
+    if (filterEndDate) filters.endDate = format(filterEndDate, 'yyyy-MM-dd');
 
     const data = await fetchPendingTransactions(filters);
     setTransactions(data);
@@ -151,7 +159,7 @@ export default function ReconcileTransactions() {
       }
     }
     setSuggestions(newSuggestions);
-  }, [fetchPendingTransactions, getSuggestion, filterBank, filterStatus, filterImport]);
+  }, [fetchPendingTransactions, getSuggestion, filterBank, filterStatus, filterImport, filterStartDate, filterEndDate]);
 
   useEffect(() => {
     loadTransactions();
@@ -403,7 +411,61 @@ export default function ReconcileTransactions() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-5">
+              <div className="space-y-2">
+                <Label>Data início</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !filterStartDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterStartDate ? format(filterStartDate, "dd/MM/yyyy") : "Selecionar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={filterStartDate}
+                      onSelect={setFilterStartDate}
+                      locale={ptBR}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Data fim</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !filterEndDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterEndDate ? format(filterEndDate, "dd/MM/yyyy") : "Selecionar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={filterEndDate}
+                      onSelect={setFilterEndDate}
+                      locale={ptBR}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               <div className="space-y-2">
                 <Label>Banco</Label>
                 <Select value={filterBank} onValueChange={setFilterBank}>

@@ -187,8 +187,8 @@ export function useImportedTransactions() {
   /**
    * Fetch pending transactions for reconciliation
    */
-  const fetchPendingTransactions = useCallback(async (
-    filters?: { bankId?: string; importId?: string; status?: string }
+   const fetchPendingTransactions = useCallback(async (
+    filters?: { bankId?: string; importId?: string; status?: string; startDate?: string; endDate?: string }
   ): Promise<ImportedTransaction[]> => {
     if (!tenantId) return [];
 
@@ -210,6 +210,12 @@ export function useImportedTransactions() {
     }
     if (filters?.status) {
       query = query.eq('status', filters.status);
+    }
+    if (filters?.startDate) {
+      query = query.gte('transaction_date', filters.startDate);
+    }
+    if (filters?.endDate) {
+      query = query.lte('transaction_date', filters.endDate);
     }
 
     const { data, error } = await query;
