@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn, formatDateBR } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -549,7 +549,7 @@ export default function ReconcileTransactions() {
                                   <TrendingDown className="h-4 w-4 text-red-600" />
                                 )}
                                 <span className="font-medium">
-                                  {format(new Date(transaction.transaction_date), "dd/MM/yyyy", { locale: ptBR })}
+                                  {formatDateBR(transaction.transaction_date)}
                                 </span>
                                 <span className={`font-semibold ${
                                   transaction.transaction_type === 'credit' ? 'text-green-600' : 'text-red-600'
