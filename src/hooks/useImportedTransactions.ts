@@ -16,7 +16,7 @@ export interface ImportedTransaction {
   transaction_type: 'credit' | 'debit';
   description: string;
   raw_type: string | null;
-  status: 'pendente' | 'conciliado' | 'criado' | 'ignorado';
+  status: 'pendente' | 'conciliado' | 'ignorado';
   reconciled_with_type: string | null;
   reconciled_with_id: string | null;
   created_record_type: string | null;
