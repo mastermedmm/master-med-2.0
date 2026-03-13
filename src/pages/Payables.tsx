@@ -1558,6 +1558,46 @@ export default function Payables() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bank Info Dialog */}
+      <Dialog open={!!bankInfoPayable} onOpenChange={(open) => !open && setBankInfoPayable(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Landmark className="h-5 w-5" />
+              Dados Bancários
+            </DialogTitle>
+            <DialogDescription>
+              {bankInfoPayable?.doctors.name} — CPF: {bankInfoPayable?.doctors.cpf}
+            </DialogDescription>
+          </DialogHeader>
+          {bankInfoPayable && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Banco</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.bank_name || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Agência</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.bank_agency || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Conta</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.bank_account || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Chave PIX</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.pix_key || '—'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBankInfoPayable(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
