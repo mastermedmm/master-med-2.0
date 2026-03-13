@@ -360,8 +360,6 @@ export default function ReconcileTransactions() {
         return <Badge variant="outline" className="text-yellow-600 border-yellow-600"><AlertCircle className="mr-1 h-3 w-3" />Pendente</Badge>;
       case 'conciliado':
         return <Badge className="bg-green-600"><Link2 className="mr-1 h-3 w-3" />Conciliado</Badge>;
-      case 'criado':
-        return <Badge className="bg-blue-600"><Plus className="mr-1 h-3 w-3" />Criado</Badge>;
       case 'ignorado':
         return <Badge variant="secondary"><Ban className="mr-1 h-3 w-3" />Ignorado</Badge>;
       default:
@@ -491,7 +489,7 @@ export default function ReconcileTransactions() {
                     <SelectItem value="all">Todos</SelectItem>
                     <SelectItem value="pendente">Pendentes</SelectItem>
                     <SelectItem value="conciliado">Conciliados</SelectItem>
-                    <SelectItem value="criado">Criados</SelectItem>
+                    
                     <SelectItem value="ignorado">Ignorados</SelectItem>
                   </SelectContent>
                 </Select>
@@ -895,7 +893,7 @@ export default function ReconcileTransactions() {
             <DialogHeader>
               <DialogTitle>Estornar Conciliação</DialogTitle>
               <DialogDescription>
-                {reversalTransaction?.status === 'criado' ? (
+                {reversalTransaction?.created_record_type ? (
                   <>O lançamento criado será excluído e a transação voltará para "Pendente".</>
                 ) : (
                   <>O vínculo com o lançamento será desfeito e a transação voltará para "Pendente".</>
