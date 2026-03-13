@@ -106,6 +106,10 @@ interface Payable {
     cpf: string;
     crm: string;
     aliquota: number;
+    bank_name: string | null;
+    bank_agency: string | null;
+    bank_account: string | null;
+    pix_key: string | null;
   };
 }
 
