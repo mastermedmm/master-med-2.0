@@ -623,6 +623,20 @@ export default function ReconcileTransactions() {
                                 </>
                               )}
 
+                              {transaction.status === 'ignorado' && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleRevertIgnored(transaction)}
+                                  disabled={isLoading}
+                                  className="text-blue-600 hover:text-blue-700"
+                                  title="Voltar para pendente"
+                                >
+                                  <Undo2 className="h-4 w-4 mr-1" />
+                                  Reverter
+                                </Button>
+                              )}
+
                               {transaction.status !== 'pendente' && transaction.status !== 'ignorado' && (
                                 <Button
                                   size="sm"
