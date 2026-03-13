@@ -545,7 +545,7 @@ export function useImportedTransactions() {
         .from('accounts_payable')
         .update({
           status: isFullyPaid ? 'pago' : 'parcialmente_pago',
-          paid_at: isFullyPaid ? nowBrasilia() : null,
+          paid_at: isFullyPaid ? transactionDate : null,
         })
         .eq('id', payableId);
 
