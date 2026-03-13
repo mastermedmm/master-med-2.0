@@ -387,7 +387,7 @@ export function useImportedTransactions() {
       const { error: txError } = await supabase
         .from('imported_transactions')
         .update({
-          status: 'criado',
+          status: 'conciliado',
           created_record_type: createdRecordType,
           created_record_id: createdRecordId,
           category_id: categoryId || null,
