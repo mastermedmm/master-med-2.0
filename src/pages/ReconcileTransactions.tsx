@@ -549,7 +549,7 @@ export default function ReconcileTransactions() {
                                   <TrendingDown className="h-4 w-4 text-red-600" />
                                 )}
                                 <span className="font-medium">
-                                  {format(new Date(transaction.transaction_date), "dd/MM/yyyy", { locale: ptBR })}
+                                  {formatDateBR(transaction.transaction_date)}
                                 </span>
                                 <span className={`font-semibold ${
                                   transaction.transaction_type === 'credit' ? 'text-green-600' : 'text-red-600'
