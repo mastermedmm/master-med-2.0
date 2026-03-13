@@ -351,7 +351,7 @@ export function useImportedTransactions() {
             description: description || 'Despesa importada',
             supplier: source || null,
             status: 'pago',
-            paid_at: nowBrasilia(),
+            paid_at: transactionDate,
             bank_id: bankId,
             created_by: user.id,
           })
