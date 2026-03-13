@@ -358,7 +358,7 @@ export function useBankStatementImport() {
         }
       }
 
-      toast.success(`Importação concluída: ${imported} criados, ${reconciled} conciliados, ${ignored} ignorados`);
+      toast.success(`Importação concluída: ${imported + reconciled} conciliados, ${ignored} ignorados`);
       return { success: true, imported, reconciled, ignored };
     } catch (error) {
       console.error('Error importing transactions:', error);
