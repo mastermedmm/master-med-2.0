@@ -140,10 +140,12 @@ export default function ReconcileTransactions() {
 
   // Load transactions
   const loadTransactions = useCallback(async () => {
-    const filters: { bankId?: string; importId?: string; status?: string } = {};
+    const filters: { bankId?: string; importId?: string; status?: string; startDate?: string; endDate?: string } = {};
     if (filterBank !== 'all') filters.bankId = filterBank;
     if (filterImport !== 'all') filters.importId = filterImport;
     if (filterStatus !== 'all') filters.status = filterStatus;
+    if (filterStartDate) filters.startDate = format(filterStartDate, 'yyyy-MM-dd');
+    if (filterEndDate) filters.endDate = format(filterEndDate, 'yyyy-MM-dd');
 
     const data = await fetchPendingTransactions(filters);
     setTransactions(data);
@@ -157,7 +159,7 @@ export default function ReconcileTransactions() {
       }
     }
     setSuggestions(newSuggestions);
-  }, [fetchPendingTransactions, getSuggestion, filterBank, filterStatus, filterImport]);
+  }, [fetchPendingTransactions, getSuggestion, filterBank, filterStatus, filterImport, filterStartDate, filterEndDate]);
 
   useEffect(() => {
     loadTransactions();
