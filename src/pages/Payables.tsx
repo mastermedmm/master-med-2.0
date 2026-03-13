@@ -155,6 +155,7 @@ export default function Payables() {
   const [loading, setLoading] = useState(true);
   const [selectedPayable, setSelectedPayable] = useState<PayableWithBalance | null>(null);
   const [dialogAction, setDialogAction] = useState<DialogAction>(null);
+  const [bankInfoPayable, setBankInfoPayable] = useState<PayableWithBalance | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Payment dialog states
