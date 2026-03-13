@@ -442,6 +442,36 @@ export function useImportedTransactions() {
   }, [user]);
 
   /**
+   * Revert an ignored transaction back to pending
+   */
+  const revertIgnored = useCallback(async (transactionId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('imported_transactions')
+        .update({
+          status: 'pendente',
+          processed_at: null,
+          processed_by: null,
+        })
+        .eq('id', transactionId);
+
+      if (error) throw error;
+
+      toast.success('Transação revertida para pendente');
+      return true;
+    } catch (error) {
+      console.error('Error reverting transaction:', error);
+      toast.error('Erro ao reverter transação');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  /**
    * Get reconciliation suggestion for a transaction
    */
   const getSuggestion = useCallback(async (
@@ -1051,6 +1081,7 @@ export function useImportedTransactions() {
     getInvoiceReceiptInfo,
     createRecord,
     ignoreTransaction,
+    revertIgnored,
     getSuggestion,
     reverseReconciliation,
   };

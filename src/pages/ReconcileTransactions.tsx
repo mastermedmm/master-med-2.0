@@ -70,6 +70,7 @@ export default function ReconcileTransactions() {
     acceptMultipleInvoicesWithAdjustment,
     createRecord, 
     ignoreTransaction,
+    revertIgnored,
     getSuggestion,
     reverseReconciliation
   } = useImportedTransactions();
@@ -199,6 +200,13 @@ export default function ReconcileTransactions() {
 
   const handleIgnore = async (transaction: ImportedTransaction) => {
     const success = await ignoreTransaction(transaction.id);
+    if (success) {
+      loadTransactions();
+    }
+  };
+
+  const handleRevertIgnored = async (transaction: ImportedTransaction) => {
+    const success = await revertIgnored(transaction.id);
     if (success) {
       loadTransactions();
     }
@@ -613,6 +621,20 @@ export default function ReconcileTransactions() {
                                     <Ban className="h-4 w-4" />
                                   </Button>
                                 </>
+                              )}
+
+                              {transaction.status === 'ignorado' && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleRevertIgnored(transaction)}
+                                  disabled={isLoading}
+                                  className="text-blue-600 hover:text-blue-700"
+                                  title="Voltar para pendente"
+                                >
+                                  <Undo2 className="h-4 w-4 mr-1" />
+                                  Reverter
+                                </Button>
                               )}
 
                               {transaction.status !== 'pendente' && transaction.status !== 'ignorado' && (
