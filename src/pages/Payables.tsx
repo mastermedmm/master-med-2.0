@@ -24,7 +24,7 @@ import { useAuditLog } from '@/hooks/useAuditLog';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   CreditCard, Clock, CheckCircle, Ban, Loader2, XCircle, Settings2, 
-  MoreHorizontal, GripVertical, Filter, CalendarIcon, X, Eye
+  MoreHorizontal, GripVertical, Filter, CalendarIcon, X, Eye, Landmark
 } from 'lucide-react';
 import { useTablePagination } from '@/hooks/useTablePagination';
 import { TablePagination } from '@/components/ui/table-pagination';
@@ -106,6 +106,10 @@ interface Payable {
     cpf: string;
     crm: string;
     aliquota: number;
+    bank_name: string | null;
+    bank_agency: string | null;
+    bank_account: string | null;
+    pix_key: string | null;
   };
 }
 
@@ -151,6 +155,7 @@ export default function Payables() {
   const [loading, setLoading] = useState(true);
   const [selectedPayable, setSelectedPayable] = useState<PayableWithBalance | null>(null);
   const [dialogAction, setDialogAction] = useState<DialogAction>(null);
+  const [bankInfoPayable, setBankInfoPayable] = useState<PayableWithBalance | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
   // Payment dialog states
@@ -421,7 +426,7 @@ export default function Payables() {
         .select(`
             *,
             invoices (company_name, hospital_name, invoice_number, gross_value, total_deductions, net_value, iss_value, issue_date, hospital_id, hospitals (document, payer_cnpj_1, payer_cnpj_2)),
-            doctors (name, cpf, crm, aliquota)
+            doctors (name, cpf, crm, aliquota, bank_name, bank_agency, bank_account, pix_key)
           `)
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false }),
@@ -948,6 +953,10 @@ export default function Payables() {
                       <DropdownMenuItem onClick={() => navigate(`/payables/${payable.id}`)}>
                         <Eye className="h-4 w-4 mr-2" />
                         Ver Histórico
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBankInfoPayable(payable as PayableWithBalance)}>
+                        <Landmark className="h-4 w-4 mr-2" />
+                        Dados Bancários
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1546,6 +1555,46 @@ export default function Payables() {
                 </>
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bank Info Dialog */}
+      <Dialog open={!!bankInfoPayable} onOpenChange={(open) => !open && setBankInfoPayable(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Landmark className="h-5 w-5" />
+              Dados Bancários
+            </DialogTitle>
+            <DialogDescription>
+              {bankInfoPayable?.doctors.name} — CPF: {bankInfoPayable?.doctors.cpf}
+            </DialogDescription>
+          </DialogHeader>
+          {bankInfoPayable && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Banco</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.bank_name || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Agência</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.bank_agency || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Conta</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.bank_account || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Chave PIX</p>
+                  <p className="font-medium">{bankInfoPayable.doctors.pix_key || '—'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBankInfoPayable(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
