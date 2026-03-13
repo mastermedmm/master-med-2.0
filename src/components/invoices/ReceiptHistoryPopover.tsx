@@ -149,11 +149,15 @@ export function ReceiptHistoryPopover({
 
       if (reversalError) throw reversalError;
 
-      // 2. Recalculate remaining received amount (excluding reversed receipts)
-      const remainingReceipts = receipts.filter(
-        r => r.id !== selectedReceipt.id && !r.reversed_at
-      );
-      const newTotalReceived = remainingReceipts.reduce((sum, r) => sum + Number(r.amount), 0);
+      // 2. Query remaining active receipts from DB (not local state)
+      const { data: remainingReceipts } = await supabase
+        .from('invoice_receipts')
+        .select('amount')
+        .eq('invoice_id', invoiceId)
+        .eq('tenant_id', tenantId)
+        .is('reversed_at', null);
+
+      const newTotalReceived = (remainingReceipts || []).reduce((sum, r) => sum + Number(r.amount), 0);
       
       // 3. Update invoice status
       let newStatus: 'pendente' | 'parcialmente_recebido' | 'recebido' = 'pendente';
@@ -169,6 +173,7 @@ export function ReceiptHistoryPopover({
           status: newStatus,
           total_received: newTotalReceived,
           receipt_date: newStatus === 'recebido' ? todayBrasilia() : null,
+          bank_id: newStatus === 'pendente' ? null : undefined,
         })
         .eq('id', invoiceId);
 
