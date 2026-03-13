@@ -1081,6 +1081,7 @@ export function useImportedTransactions() {
     getInvoiceReceiptInfo,
     createRecord,
     ignoreTransaction,
+    revertIgnored,
     getSuggestion,
     reverseReconciliation,
   };
