@@ -70,6 +70,7 @@ export default function ReconcileTransactions() {
     acceptMultipleInvoicesWithAdjustment,
     createRecord, 
     ignoreTransaction,
+    revertIgnored,
     getSuggestion,
     reverseReconciliation
   } = useImportedTransactions();
