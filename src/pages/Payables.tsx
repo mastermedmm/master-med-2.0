@@ -950,10 +950,6 @@ export default function Payables() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/payables/${payable.id}`)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Ver Histórico
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setBankInfoPayable(payable as PayableWithBalance)}>
                         <Landmark className="h-4 w-4 mr-2" />
                         Dados Bancários
