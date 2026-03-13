@@ -33,6 +33,7 @@ interface Receipt {
   adjustment_amount: number;
   adjustment_reason: string | null;
   bank_id: string;
+  imported_transaction_id: string | null;
   banks: {
     name: string;
   };
@@ -89,6 +90,7 @@ export function ReceiptHistoryPopover({
           adjustment_amount,
           adjustment_reason,
           bank_id,
+          imported_transaction_id,
           banks (name)
         `)
         .eq('invoice_id', invoiceId)
@@ -178,6 +180,22 @@ export function ReceiptHistoryPopover({
         .eq('id', invoiceId);
 
       if (updateError) throw updateError;
+
+      // 4. Reset the linked imported_transaction so it can be re-reconciled
+      if (selectedReceipt.imported_transaction_id) {
+        const { error: txError } = await supabase
+          .from('imported_transactions')
+          .update({
+            status: 'pendente',
+            reconciled_with_id: null,
+            reconciled_with_type: null,
+            processed_at: null,
+            processed_by: null,
+          })
+          .eq('id', selectedReceipt.imported_transaction_id);
+
+        if (txError) throw txError;
+      }
 
       toast({
         title: 'Recebimento estornado!',
