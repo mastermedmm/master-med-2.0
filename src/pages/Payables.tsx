@@ -954,6 +954,10 @@ export default function Payables() {
                         <Eye className="h-4 w-4 mr-2" />
                         Ver Histórico
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBankInfoPayable(payable as PayableWithBalance)}>
+                        <Landmark className="h-4 w-4 mr-2" />
+                        Dados Bancários
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
