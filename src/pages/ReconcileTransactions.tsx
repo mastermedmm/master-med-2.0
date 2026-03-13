@@ -86,6 +86,8 @@ export default function ReconcileTransactions() {
   const [filterBank, setFilterBank] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('pendente');
   const [filterImport, setFilterImport] = useState<string>('all');
+  const [filterStartDate, setFilterStartDate] = useState<Date | undefined>(undefined);
+  const [filterEndDate, setFilterEndDate] = useState<Date | undefined>(undefined);
   
   // Classification dialog
   const [classifyDialogOpen, setClassifyDialogOpen] = useState(false);
