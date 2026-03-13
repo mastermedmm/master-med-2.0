@@ -587,10 +587,23 @@ export function useImportedTransactions() {
 
     setIsLoading(true);
     try {
-      // Handle based on status
-      if (transaction.status === 'conciliado') {
-        // Reverse the linked record
-        if (transaction.reconciled_with_type === 'expense') {
+      // Handle based on type: created records vs reconciled with existing
+      if (transaction.created_record_type) {
+        // Delete the created record
+        if (transaction.created_record_type === 'expense') {
+          const { error } = await supabase
+            .from('expenses')
+            .delete()
+            .eq('id', transaction.created_record_id);
+          if (error) throw error;
+        } else if (transaction.created_record_type === 'revenue') {
+          const { error } = await supabase
+            .from('revenues')
+            .delete()
+            .eq('id', transaction.created_record_id);
+          if (error) throw error;
+        }
+      } else if (transaction.reconciled_with_type === 'expense') {
           // Reset expense to pending
           const { error } = await supabase
             .from('expenses')
