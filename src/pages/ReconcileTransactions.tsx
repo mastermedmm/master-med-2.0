@@ -893,7 +893,7 @@ export default function ReconcileTransactions() {
             <DialogHeader>
               <DialogTitle>Estornar Conciliação</DialogTitle>
               <DialogDescription>
-                {reversalTransaction?.status === 'criado' ? (
+                {reversalTransaction?.created_record_type ? (
                   <>O lançamento criado será excluído e a transação voltará para "Pendente".</>
                 ) : (
                   <>O vínculo com o lançamento será desfeito e a transação voltará para "Pendente".</>
