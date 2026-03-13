@@ -181,6 +181,22 @@ export function ReceiptHistoryPopover({
 
       if (updateError) throw updateError;
 
+      // 4. Reset the linked imported_transaction so it can be re-reconciled
+      if (selectedReceipt.imported_transaction_id) {
+        const { error: txError } = await supabase
+          .from('imported_transactions')
+          .update({
+            status: 'pendente',
+            reconciled_with_id: null,
+            reconciled_with_type: null,
+            processed_at: null,
+            processed_by: null,
+          })
+          .eq('id', selectedReceipt.imported_transaction_id);
+
+        if (txError) throw txError;
+      }
+
       toast({
         title: 'Recebimento estornado!',
         description: `${formatCurrency(selectedReceipt.amount)} estornado da NF ${invoiceNumber}.`,
