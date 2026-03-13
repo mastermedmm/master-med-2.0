@@ -360,8 +360,6 @@ export default function ReconcileTransactions() {
         return <Badge variant="outline" className="text-yellow-600 border-yellow-600"><AlertCircle className="mr-1 h-3 w-3" />Pendente</Badge>;
       case 'conciliado':
         return <Badge className="bg-green-600"><Link2 className="mr-1 h-3 w-3" />Conciliado</Badge>;
-      case 'criado':
-        return <Badge className="bg-blue-600"><Plus className="mr-1 h-3 w-3" />Criado</Badge>;
       case 'ignorado':
         return <Badge variant="secondary"><Ban className="mr-1 h-3 w-3" />Ignorado</Badge>;
       default:
