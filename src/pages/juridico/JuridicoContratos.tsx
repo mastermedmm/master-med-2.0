@@ -181,6 +181,7 @@ export default function JuridicoContratos() {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.juridico_empresas?.nome || "—"}</TableCell>
+                      <TableCell>{c.juridico_tipos_contrato?.nome || "—"}</TableCell>
                       <TableCell>{c.fornecedor_nome}</TableCell>
                       <TableCell>{c.telefone_fornecedor || "—"}</TableCell>
                       <TableCell>{format(new Date(c.data_contratacao + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
