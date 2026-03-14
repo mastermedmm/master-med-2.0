@@ -109,9 +109,11 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     setSaving(true);
     try {
       const payload = {
-        issuer_id: values.juridico_empresa_id, // keep old column in sync
+        issuer_id: values.juridico_empresa_id,
         juridico_empresa_id: values.juridico_empresa_id,
         fornecedor_nome: values.fornecedor_nome,
+        telefone_fornecedor: values.telefone_fornecedor || null,
+        site_fornecedor: values.site_fornecedor || null,
         data_contratacao: format(values.data_contratacao, "yyyy-MM-dd"),
         data_vencimento: values.data_vencimento ? format(values.data_vencimento, "yyyy-MM-dd") : null,
         status: values.status,
