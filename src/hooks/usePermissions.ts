@@ -31,7 +31,9 @@ export type ModuleName =
   | 'nfse.configuracoes'
   | 'nfse.reprocessar'
   | 'juridico.contratos'
-  | 'juridico.rts';
+  | 'juridico.rts'
+  | 'juridico.profissionais'
+  | 'juridico.empresas';
 
 export type AppRole = 'admin' | 'operador' | 'financeiro' | 'juridico';
 

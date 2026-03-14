@@ -53,6 +53,8 @@ import NfseConfiguracoes from "./pages/nfse/NfseConfiguracoes";
 import NfseTomadores from "./pages/nfse/NfseTomadores";
 
 // Juridico Pages
+import JuridicoProfissionais from "./pages/juridico/JuridicoProfissionais";
+import JuridicoEmpresas from "./pages/juridico/JuridicoEmpresas";
 import JuridicoContratos from "./pages/juridico/JuridicoContratos";
 import JuridicoRTs from "./pages/juridico/JuridicoRTs";
 import JuridicoRTDetail from "./pages/juridico/JuridicoRTDetail";
@@ -310,6 +312,8 @@ function AppRoutes() {
       <Route path={ROUTES.nfse.tomadores} element={<ProtectedRoute><NfseTomadores /></ProtectedRoute>} />
       
       {/* Juridico Routes */}
+      <Route path={ROUTES.juridico.profissionais} element={<ProtectedRoute><JuridicoProfissionais /></ProtectedRoute>} />
+      <Route path={ROUTES.juridico.empresas} element={<ProtectedRoute><JuridicoEmpresas /></ProtectedRoute>} />
       <Route path={ROUTES.juridico.contratos} element={<ProtectedRoute><JuridicoContratos /></ProtectedRoute>} />
       <Route path={ROUTES.juridico.rts} element={<ProtectedRoute><JuridicoRTs /></ProtectedRoute>} />
       <Route path="/juridico/rts/:id" element={<ProtectedRoute><JuridicoRTDetail /></ProtectedRoute>} />

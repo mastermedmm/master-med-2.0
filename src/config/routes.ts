@@ -42,6 +42,8 @@ export const ROUTES = {
   
   // Jurídico
   juridico: {
+    profissionais: '/juridico/profissionais',
+    empresas: '/juridico/empresas',
     contratos: '/juridico/contratos',
     rts: '/juridico/rts',
     rtDetail: (id: string) => `/juridico/rts/${id}`,

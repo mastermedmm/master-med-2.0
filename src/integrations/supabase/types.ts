@@ -429,6 +429,7 @@ export type Database = {
           fornecedor_nome: string
           id: string
           issuer_id: string
+          juridico_empresa_id: string | null
           observacoes: string | null
           status: string
           tenant_id: string | null
@@ -441,6 +442,7 @@ export type Database = {
           fornecedor_nome: string
           id?: string
           issuer_id: string
+          juridico_empresa_id?: string | null
           observacoes?: string | null
           status?: string
           tenant_id?: string | null
@@ -453,6 +455,7 @@ export type Database = {
           fornecedor_nome?: string
           id?: string
           issuer_id?: string
+          juridico_empresa_id?: string | null
           observacoes?: string | null
           status?: string
           tenant_id?: string | null
@@ -464,6 +467,13 @@ export type Database = {
             columns: ["issuer_id"]
             isOneToOne: false
             referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_juridico_empresa_id_fkey"
+            columns: ["juridico_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "juridico_empresas"
             referencedColumns: ["id"]
           },
           {
@@ -1578,6 +1588,103 @@ export type Database = {
           },
         ]
       }
+      juridico_empresas: {
+        Row: {
+          cidade: string | null
+          cnpj: string | null
+          created_at: string
+          id: string
+          nome: string
+          observacoes: string | null
+          tenant_id: string | null
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          observacoes?: string | null
+          tenant_id?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          tenant_id?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juridico_empresas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      juridico_profissionais: {
+        Row: {
+          cpf: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          registro_conselho: string | null
+          telefone: string | null
+          tenant_id: string | null
+          tipo_conselho: string | null
+          uf_conselho: string | null
+          updated_at: string
+        }
+        Insert: {
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          registro_conselho?: string | null
+          telefone?: string | null
+          tenant_id?: string | null
+          tipo_conselho?: string | null
+          uf_conselho?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          registro_conselho?: string | null
+          telefone?: string | null
+          tenant_id?: string | null
+          tipo_conselho?: string | null
+          uf_conselho?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juridico_profissionais_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       licensee_sessions: {
         Row: {
           created_at: string
@@ -2584,6 +2691,8 @@ export type Database = {
           data_validade: string | null
           empresa_id: string
           id: string
+          juridico_empresa_id: string | null
+          juridico_profissional_id: string | null
           login_portal_conselho: string | null
           observacoes: string | null
           profissional_id: string
@@ -2601,6 +2710,8 @@ export type Database = {
           data_validade?: string | null
           empresa_id: string
           id?: string
+          juridico_empresa_id?: string | null
+          juridico_profissional_id?: string | null
           login_portal_conselho?: string | null
           observacoes?: string | null
           profissional_id: string
@@ -2618,6 +2729,8 @@ export type Database = {
           data_validade?: string | null
           empresa_id?: string
           id?: string
+          juridico_empresa_id?: string | null
+          juridico_profissional_id?: string | null
           login_portal_conselho?: string | null
           observacoes?: string | null
           profissional_id?: string
@@ -2634,6 +2747,20 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vinculos_rt_juridico_empresa_id_fkey"
+            columns: ["juridico_empresa_id"]
+            isOneToOne: false
+            referencedRelation: "juridico_empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vinculos_rt_juridico_profissional_id_fkey"
+            columns: ["juridico_profissional_id"]
+            isOneToOne: false
+            referencedRelation: "juridico_profissionais"
             referencedColumns: ["id"]
           },
           {

@@ -117,6 +117,8 @@ function getDefaultPermissions(tenant_id: string) {
     'audit_logs': { can_create: false, can_read: false, can_update: false, can_delete: false, can_customize: false },
     'juridico.contratos': { can_create: true, can_read: true, can_update: true, can_delete: true, can_customize: false },
     'juridico.rts': { can_create: true, can_read: true, can_update: true, can_delete: true, can_customize: false },
+    'juridico.profissionais': { can_create: true, can_read: true, can_update: true, can_delete: true, can_customize: false },
+    'juridico.empresas': { can_create: true, can_read: true, can_update: true, can_delete: true, can_customize: false },
   };
 
   for (const [module_name, perms] of Object.entries(juridicoModules)) {

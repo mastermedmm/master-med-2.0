@@ -35,8 +35,8 @@ const STATUS_OPTIONS = [
 ];
 
 type FormData = {
-  profissional_id: string;
-  empresa_id: string;
+  juridico_profissional_id: string;
+  juridico_empresa_id: string;
   conselho_pj: string;
   uf_conselho_pj: string;
   registro_pj: string;
@@ -49,8 +49,8 @@ type FormData = {
 };
 
 const emptyForm: FormData = {
-  profissional_id: "",
-  empresa_id: "",
+  juridico_profissional_id: "",
+  juridico_empresa_id: "",
   conselho_pj: "",
   uf_conselho_pj: "",
   registro_pj: "",
@@ -66,11 +66,11 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vinculo: VinculoRT | null;
-  doctors: { id: string; name: string; crm: string }[];
-  issuers: { id: string; name: string; cnpj: string }[];
+  profissionais: { id: string; nome: string; registro_conselho: string | null }[];
+  empresas: { id: string; nome: string; cnpj: string | null }[];
 }
 
-export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issuers }: Props) {
+export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais, empresas }: Props) {
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
@@ -80,12 +80,11 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
 
   const [form, setForm] = useState<FormData>(emptyForm);
 
-  // Sync form when dialog opens
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen && vinculo) {
       setForm({
-        profissional_id: vinculo.profissional_id,
-        empresa_id: vinculo.empresa_id,
+        juridico_profissional_id: vinculo.juridico_profissional_id || vinculo.profissional_id,
+        juridico_empresa_id: vinculo.juridico_empresa_id || vinculo.empresa_id,
         conselho_pj: vinculo.conselho_pj || "",
         uf_conselho_pj: vinculo.uf_conselho_pj || "",
         registro_pj: vinculo.registro_pj || "",
@@ -103,11 +102,10 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
     onOpenChange(newOpen);
   };
 
-  // Ensure form is set when vinculo changes while open
-  if (open && vinculo && form.profissional_id !== vinculo.profissional_id) {
+  if (open && vinculo && form.juridico_profissional_id !== (vinculo.juridico_profissional_id || vinculo.profissional_id)) {
     setForm({
-      profissional_id: vinculo.profissional_id,
-      empresa_id: vinculo.empresa_id,
+      juridico_profissional_id: vinculo.juridico_profissional_id || vinculo.profissional_id,
+      juridico_empresa_id: vinculo.juridico_empresa_id || vinculo.empresa_id,
       conselho_pj: vinculo.conselho_pj || "",
       uf_conselho_pj: vinculo.uf_conselho_pj || "",
       registro_pj: vinculo.registro_pj || "",
@@ -123,8 +121,10 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const payload = {
-        profissional_id: data.profissional_id,
-        empresa_id: data.empresa_id,
+        profissional_id: data.juridico_profissional_id,
+        empresa_id: data.juridico_empresa_id,
+        juridico_profissional_id: data.juridico_profissional_id,
+        juridico_empresa_id: data.juridico_empresa_id,
         conselho_pj: data.conselho_pj || null,
         uf_conselho_pj: data.uf_conselho_pj || null,
         registro_pj: data.registro_pj || null,
@@ -144,7 +144,6 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
           .eq("id", vinculo.id);
         if (error) throw error;
 
-        // Log history events
         const changes: string[] = [];
         if (vinculo.data_validade !== (data.data_validade || null)) {
           changes.push("validade");
@@ -166,7 +165,6 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
             dadosNovos: { status: data.status },
           });
         }
-        // General edit event (if no specific event was logged)
         if (changes.length === 0 && vinculo.status === data.status) {
           await logEvent({
             vinculoRtId: vinculo.id,
@@ -186,7 +184,6 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
           .single();
         if (error) throw error;
 
-        // Log creation
         await logEvent({
           vinculoRtId: (inserted as any).id,
           tipoEvento: "criacao",
@@ -216,7 +213,7 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.profissional_id || !form.empresa_id) {
+    if (!form.juridico_profissional_id || !form.juridico_empresa_id) {
       toast.error("Selecione o profissional e a empresa.");
       return;
     }
@@ -233,12 +230,12 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Profissional *</Label>
-              <Select value={form.profissional_id} onValueChange={(v) => setForm({ ...form, profissional_id: v })}>
+              <Select value={form.juridico_profissional_id} onValueChange={(v) => setForm({ ...form, juridico_profissional_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
-                  {doctors.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name} (CRM: {d.crm})
+                  {profissionais.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome} {p.registro_conselho ? `(${p.registro_conselho})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -246,12 +243,12 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, doctors, issu
             </div>
             <div className="space-y-2">
               <Label>Empresa *</Label>
-              <Select value={form.empresa_id} onValueChange={(v) => setForm({ ...form, empresa_id: v })}>
+              <Select value={form.juridico_empresa_id} onValueChange={(v) => setForm({ ...form, juridico_empresa_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
-                  {issuers.map((i) => (
-                    <SelectItem key={i.id} value={i.id}>
-                      {i.name} ({i.cnpj})
+                  {empresas.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.nome} {e.cnpj ? `(${e.cnpj})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
