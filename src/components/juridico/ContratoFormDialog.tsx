@@ -84,6 +84,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     resolver: zodResolver(formSchema),
     defaultValues: {
       juridico_empresa_id: "",
+      tipo_contrato_id: "",
       fornecedor_nome: "",
       telefone_fornecedor: "",
       site_fornecedor: "",
