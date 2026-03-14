@@ -29,6 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   juridico_empresa_id: z.string().min(1, "Selecione a empresa"),
+  tipo_contrato_id: z.string().optional(),
   fornecedor_nome: z.string().min(1, "Informe o fornecedor"),
   telefone_fornecedor: z.string().optional(),
   site_fornecedor: z.string().optional(),
