@@ -53,6 +53,8 @@ import NfseConfiguracoes from "./pages/nfse/NfseConfiguracoes";
 import NfseTomadores from "./pages/nfse/NfseTomadores";
 
 // Juridico Pages
+import JuridicoProfissionais from "./pages/juridico/JuridicoProfissionais";
+import JuridicoEmpresas from "./pages/juridico/JuridicoEmpresas";
 import JuridicoContratos from "./pages/juridico/JuridicoContratos";
 import JuridicoRTs from "./pages/juridico/JuridicoRTs";
 import JuridicoRTDetail from "./pages/juridico/JuridicoRTDetail";
