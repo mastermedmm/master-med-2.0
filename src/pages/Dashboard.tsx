@@ -32,6 +32,12 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (tenantId) {
+      loadStats();
+    }
+  }, [tenantId]);
+
   // If permissions loaded and user has no dashboard access, redirect
   if (!permLoading && permissions.length > 0 && !hasAnyPermission('dashboard')) {
     if (firstRoute) {
@@ -48,12 +54,6 @@ export default function Dashboard() {
       </AppLayout>
     );
   }
-
-  useEffect(() => {
-    if (tenantId) {
-      loadStats();
-    }
-  }, [tenantId]);
 
   async function loadStats() {
     if (!tenantId) return;
