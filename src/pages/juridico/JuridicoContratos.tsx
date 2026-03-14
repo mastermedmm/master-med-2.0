@@ -39,7 +39,7 @@ export default function JuridicoContratos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contratos")
-        .select("*, juridico_empresas:juridico_empresa_id(nome, cnpj)")
+        .select("*, juridico_empresas:juridico_empresa_id(nome, cnpj), juridico_tipos_contrato:tipo_contrato_id(nome)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -150,6 +150,7 @@ export default function JuridicoContratos() {
             <TableHeader>
               <TableRow>
                 <TableHead>Empresa</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Fornecedor</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Contratação</TableHead>
@@ -162,14 +163,14 @@ export default function JuridicoContratos() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                     {Array.from({ length: 7 }).map((_, j) => (
+                     {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                     Nenhum contrato encontrado.
                   </TableCell>
                 </TableRow>
@@ -180,6 +181,7 @@ export default function JuridicoContratos() {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.juridico_empresas?.nome || "—"}</TableCell>
+                      <TableCell>{c.juridico_tipos_contrato?.nome || "—"}</TableCell>
                       <TableCell>{c.fornecedor_nome}</TableCell>
                       <TableCell>{c.telefone_fornecedor || "—"}</TableCell>
                       <TableCell>{format(new Date(c.data_contratacao + "T00:00:00"), "dd/MM/yyyy")}</TableCell>

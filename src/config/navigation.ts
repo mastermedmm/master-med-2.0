@@ -23,7 +23,7 @@ import {
   Handshake,
   Contact,
   FilePlus,
-  
+  Tags,
   FileSignature,
   ShieldCheck,
   FileCheck,
@@ -89,6 +89,7 @@ export const nfseNav: AppNavItem[] = [
 export const juridicoNav: AppNavItem[] = [
   { label: "Profissionais", to: ROUTES.juridico.profissionais, icon: Users, module: "juridico.profissionais" },
   { label: "Empresas", to: ROUTES.juridico.empresas, icon: Building2, module: "juridico.empresas" },
+  { label: "Tipos de Contrato", to: ROUTES.juridico.tiposContrato, icon: Tags, module: "juridico.contratos" },
   { label: "Controle de Contratos", to: ROUTES.juridico.contratos, icon: FileSignature, module: "juridico.contratos" },
   { label: "Controle de RTs", to: ROUTES.juridico.rts, icon: ShieldCheck, module: "juridico.rts" },
 ];

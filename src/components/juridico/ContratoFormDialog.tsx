@@ -29,6 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   juridico_empresa_id: z.string().min(1, "Selecione a empresa"),
+  tipo_contrato_id: z.string().optional(),
   fornecedor_nome: z.string().min(1, "Informe o fornecedor"),
   telefone_fornecedor: z.string().optional(),
   site_fornecedor: z.string().optional(),
@@ -65,10 +66,25 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     enabled: !!tenantId,
   });
 
+  const { data: tiposContrato = [] } = useQuery({
+    queryKey: ["juridico_tipos_contrato", tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("juridico_tipos_contrato" as any)
+        .select("id, nome")
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .order("nome");
+      return (data as unknown as { id: string; nome: string }[]) || [];
+    },
+    enabled: !!tenantId,
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       juridico_empresa_id: "",
+      tipo_contrato_id: "",
       fornecedor_nome: "",
       telefone_fornecedor: "",
       site_fornecedor: "",
@@ -83,6 +99,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     if (contrato) {
       form.reset({
         juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
+        tipo_contrato_id: contrato.tipo_contrato_id || "",
         fornecedor_nome: contrato.fornecedor_nome,
         telefone_fornecedor: contrato.telefone_fornecedor || "",
         site_fornecedor: contrato.site_fornecedor || "",
@@ -94,6 +111,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     } else {
       form.reset({
         juridico_empresa_id: "",
+        tipo_contrato_id: "",
         fornecedor_nome: "",
         telefone_fornecedor: "",
         site_fornecedor: "",
@@ -111,6 +129,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       const payload = {
         issuer_id: values.juridico_empresa_id,
         juridico_empresa_id: values.juridico_empresa_id,
+        tipo_contrato_id: values.tipo_contrato_id || null,
         fornecedor_nome: values.fornecedor_nome,
         telefone_fornecedor: values.telefone_fornecedor || null,
         site_fornecedor: values.site_fornecedor || null,
@@ -169,6 +188,31 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                       {empresas.map((e) => (
                         <SelectItem key={e.id} value={e.id}>
                           {e.nome} {e.cnpj ? `(${e.cnpj})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="tipo_contrato_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Contrato</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {tiposContrato.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.nome}
                         </SelectItem>
                       ))}
                     </SelectContent>

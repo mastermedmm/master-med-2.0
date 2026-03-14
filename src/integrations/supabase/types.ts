@@ -435,6 +435,7 @@ export type Database = {
           status: string
           telefone_fornecedor: string | null
           tenant_id: string | null
+          tipo_contrato_id: string | null
           updated_at: string
         }
         Insert: {
@@ -450,6 +451,7 @@ export type Database = {
           status?: string
           telefone_fornecedor?: string | null
           tenant_id?: string | null
+          tipo_contrato_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -465,6 +467,7 @@ export type Database = {
           status?: string
           telefone_fornecedor?: string | null
           tenant_id?: string | null
+          tipo_contrato_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -487,6 +490,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_tipo_contrato_id_fkey"
+            columns: ["tipo_contrato_id"]
+            isOneToOne: false
+            referencedRelation: "juridico_tipos_contrato"
             referencedColumns: ["id"]
           },
         ]
@@ -1684,6 +1694,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "juridico_profissionais_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      juridico_tipos_contrato: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          nome: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juridico_tipos_contrato_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
