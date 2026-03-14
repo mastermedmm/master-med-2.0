@@ -151,6 +151,7 @@ export default function JuridicoContratos() {
               <TableRow>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Fornecedor</TableHead>
+                <TableHead>Telefone</TableHead>
                 <TableHead>Contratação</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Status</TableHead>
@@ -161,14 +162,14 @@ export default function JuridicoContratos() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 6 }).map((_, j) => (
+                     {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     Nenhum contrato encontrado.
                   </TableCell>
                 </TableRow>
@@ -180,6 +181,7 @@ export default function JuridicoContratos() {
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.juridico_empresas?.nome || "—"}</TableCell>
                       <TableCell>{c.fornecedor_nome}</TableCell>
+                      <TableCell>{c.telefone_fornecedor || "—"}</TableCell>
                       <TableCell>{format(new Date(c.data_contratacao + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
                       <TableCell>
                         {c.data_vencimento
