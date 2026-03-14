@@ -23,6 +23,14 @@ export default function Dashboard() {
   const { tenantId } = useTenant();
   const { hasAnyPermission, loading: permLoading, permissions } = usePermissions();
   const firstRoute = useFirstAccessibleRoute();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalInvoices: 0,
+    pendingReceipts: 0,
+    receivedTotal: 0,
+    pendingPayables: 0,
+    paidTotal: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   // If permissions loaded and user has no dashboard access, redirect
   if (!permLoading && permissions.length > 0 && !hasAnyPermission('dashboard')) {
@@ -40,14 +48,6 @@ export default function Dashboard() {
       </AppLayout>
     );
   }
-  const [stats, setStats] = useState<DashboardStats>({
-    totalInvoices: 0,
-    pendingReceipts: 0,
-    receivedTotal: 0,
-    pendingPayables: 0,
-    paidTotal: 0,
-  });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (tenantId) {
