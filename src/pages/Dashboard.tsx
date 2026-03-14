@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { ROUTES } from '@/config/routes';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useFirstAccessibleRoute } from '@/hooks/useFirstAccessibleRoute';
 import { FileUp, FileCheck, Clock, CheckCircle, CreditCard, TrendingUp } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface DashboardStats {
   totalInvoices: number;
