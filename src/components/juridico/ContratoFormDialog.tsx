@@ -84,6 +84,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       form.reset({
         juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
         fornecedor_nome: contrato.fornecedor_nome,
+        telefone_fornecedor: contrato.telefone_fornecedor || "",
+        site_fornecedor: contrato.site_fornecedor || "",
         data_contratacao: new Date(contrato.data_contratacao + "T00:00:00"),
         data_vencimento: contrato.data_vencimento ? new Date(contrato.data_vencimento + "T00:00:00") : null,
         status: contrato.status,
