@@ -39,7 +39,7 @@ export default function JuridicoContratos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contratos")
-        .select("*, juridico_empresas:juridico_empresa_id(nome, cnpj)")
+        .select("*, juridico_empresas:juridico_empresa_id(nome, cnpj), juridico_tipos_contrato:tipo_contrato_id(nome)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
