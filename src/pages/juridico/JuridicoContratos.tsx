@@ -170,7 +170,7 @@ export default function JuridicoContratos() {
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                     Nenhum contrato encontrado.
                   </TableCell>
                 </TableRow>
