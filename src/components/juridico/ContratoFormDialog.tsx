@@ -195,6 +195,36 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
+                name="telefone_fornecedor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone do Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="(00) 00000-0000" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="site_fornecedor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site do Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://exemplo.com" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
                 name="data_contratacao"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
