@@ -199,6 +199,31 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
 
             <FormField
               control={form.control}
+              name="tipo_contrato_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de Contrato</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {tiposContrato.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="fornecedor_nome"
               render={({ field }) => (
                 <FormItem>
