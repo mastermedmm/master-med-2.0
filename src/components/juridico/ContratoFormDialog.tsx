@@ -70,6 +70,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     defaultValues: {
       juridico_empresa_id: "",
       fornecedor_nome: "",
+      telefone_fornecedor: "",
+      site_fornecedor: "",
       data_contratacao: new Date(),
       data_vencimento: null,
       status: "ativo",
