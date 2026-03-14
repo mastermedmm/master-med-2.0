@@ -10,39 +10,25 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+  Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
-  issuer_id: z.string().min(1, "Selecione a empresa"),
+  juridico_empresa_id: z.string().min(1, "Selecione a empresa"),
   fornecedor_nome: z.string().min(1, "Informe o fornecedor"),
   data_contratacao: z.date({ required_error: "Informe a data de contratação" }),
   data_vencimento: z.date().optional().nullable(),
@@ -64,15 +50,15 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
-  const { data: issuers = [] } = useQuery({
-    queryKey: ["issuers-for-contratos", tenantId],
+  const { data: empresas = [] } = useQuery({
+    queryKey: ["juridico_empresas_for_contratos", tenantId],
     queryFn: async () => {
       const { data } = await supabase
-        .from("issuers")
-        .select("id, name, cnpj")
-        .eq("active", true)
-        .order("name");
-      return data || [];
+        .from("juridico_empresas" as any)
+        .select("id, nome, cnpj")
+        .eq("tenant_id", tenantId)
+        .order("nome");
+      return (data as unknown as { id: string; nome: string; cnpj: string | null }[]) || [];
     },
     enabled: !!tenantId,
   });
@@ -80,7 +66,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      issuer_id: "",
+      juridico_empresa_id: "",
       fornecedor_nome: "",
       data_contratacao: new Date(),
       data_vencimento: null,
@@ -92,7 +78,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
   useEffect(() => {
     if (contrato) {
       form.reset({
-        issuer_id: contrato.issuer_id,
+        juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
         fornecedor_nome: contrato.fornecedor_nome,
         data_contratacao: new Date(contrato.data_contratacao + "T00:00:00"),
         data_vencimento: contrato.data_vencimento ? new Date(contrato.data_vencimento + "T00:00:00") : null,
@@ -101,7 +87,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       });
     } else {
       form.reset({
-        issuer_id: "",
+        juridico_empresa_id: "",
         fornecedor_nome: "",
         data_contratacao: new Date(),
         data_vencimento: null,
@@ -115,7 +101,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     setSaving(true);
     try {
       const payload = {
-        issuer_id: values.issuer_id,
+        issuer_id: values.juridico_empresa_id, // keep old column in sync
+        juridico_empresa_id: values.juridico_empresa_id,
         fornecedor_nome: values.fornecedor_nome,
         data_contratacao: format(values.data_contratacao, "yyyy-MM-dd"),
         data_vencimento: values.data_vencimento ? format(values.data_vencimento, "yyyy-MM-dd") : null,
@@ -158,7 +145,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="issuer_id"
+              name="juridico_empresa_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Empresa</FormLabel>
@@ -169,9 +156,9 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {issuers.map((i: any) => (
-                        <SelectItem key={i.id} value={i.id}>
-                          {i.name} ({i.cnpj})
+                      {empresas.map((e) => (
+                        <SelectItem key={e.id} value={e.id}>
+                          {e.nome} {e.cnpj ? `(${e.cnpj})` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

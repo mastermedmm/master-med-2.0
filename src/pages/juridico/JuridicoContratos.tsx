@@ -39,7 +39,7 @@ export default function JuridicoContratos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contratos")
-        .select("*, issuers(name, cnpj)")
+        .select("*, juridico_empresas:juridico_empresa_id(nome, cnpj)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
@@ -50,7 +50,7 @@ export default function JuridicoContratos() {
   const empresas = useMemo(() => {
     const map = new Map<string, string>();
     contratos.forEach((c: any) => {
-      if (c.issuers) map.set(c.issuer_id, c.issuers.name);
+      if (c.juridico_empresas) map.set(c.juridico_empresa_id, c.juridico_empresas.nome);
     });
     return Array.from(map.entries());
   }, [contratos]);
@@ -58,7 +58,7 @@ export default function JuridicoContratos() {
   const filtered = useMemo(() => {
     return contratos.filter((c: any) => {
       if (searchFornecedor && !c.fornecedor_nome.toLowerCase().includes(searchFornecedor.toLowerCase())) return false;
-      if (filterEmpresa !== "todas" && c.issuer_id !== filterEmpresa) return false;
+      if (filterEmpresa !== "todas" && c.juridico_empresa_id !== filterEmpresa) return false;
       if (filterStatus !== "todos") {
         const st = computeContratoStatus(c.status, c.data_vencimento);
         if (st.computed !== filterStatus) return false;
@@ -178,7 +178,7 @@ export default function JuridicoContratos() {
                   const alert = getAlertLevel(statusInfo.diasParaVencimento);
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.issuers?.name || "—"}</TableCell>
+                      <TableCell className="font-medium">{c.juridico_empresas?.nome || "—"}</TableCell>
                       <TableCell>{c.fornecedor_nome}</TableCell>
                       <TableCell>{format(new Date(c.data_contratacao + "T00:00:00"), "dd/MM/yyyy")}</TableCell>
                       <TableCell>

@@ -43,44 +43,43 @@ export default function JuridicoRTDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vinculos_rt" as any)
-        .select("*, doctors(name, crm, cpf, phone, email:cpf), issuers(name, cnpj, city, state, iss_rate)")
+        .select("*, juridico_profissionais(nome, registro_conselho, cpf, telefone, email), juridico_empresas(nome, cnpj, cidade, uf)")
         .eq("id", id!)
         .single();
       if (error) throw error;
       return data as unknown as VinculoRT & {
-        doctors: { name: string; crm: string; cpf: string; phone: string | null } | null;
-        issuers: { name: string; cnpj: string; city: string; state: string; iss_rate: number } | null;
+        juridico_profissionais: { nome: string; registro_conselho: string | null; cpf: string | null; telefone: string | null; email: string | null } | null;
+        juridico_empresas: { nome: string; cnpj: string | null; cidade: string | null; uf: string | null } | null;
       };
     },
     enabled: !!id && !!tenant?.id,
   });
 
-  // Fetch doctors and issuers for edit dialog
-  const { data: doctors } = useQuery({
-    queryKey: ["doctors_list", tenant?.id],
+  // Fetch profissionais and empresas for edit dialog
+  const { data: profissionais } = useQuery({
+    queryKey: ["juridico_profissionais", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("doctors")
-        .select("id, name, crm")
+        .from("juridico_profissionais" as any)
+        .select("id, nome, registro_conselho")
         .eq("tenant_id", tenant?.id)
-        .order("name");
+        .order("nome");
       if (error) throw error;
-      return data;
+      return data as unknown as { id: string; nome: string; registro_conselho: string | null }[];
     },
     enabled: !!tenant?.id,
   });
 
-  const { data: issuers } = useQuery({
-    queryKey: ["issuers_list", tenant?.id],
+  const { data: empresas } = useQuery({
+    queryKey: ["juridico_empresas", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("issuers")
-        .select("id, name, cnpj")
+        .from("juridico_empresas" as any)
+        .select("id, nome, cnpj")
         .eq("tenant_id", tenant?.id)
-        .eq("active", true)
-        .order("name");
+        .order("nome");
       if (error) throw error;
-      return data;
+      return data as unknown as { id: string; nome: string; cnpj: string | null }[];
     },
     enabled: !!tenant?.id,
   });
@@ -124,7 +123,7 @@ export default function JuridicoRTDetail() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                  {vinculo.issuers?.name || "Vínculo RT"}
+                  {vinculo.juridico_empresas?.nome || "Vínculo RT"}
                 </h1>
                 <span className={cn(
                   "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
@@ -134,7 +133,7 @@ export default function JuridicoRTDetail() {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">
-                {vinculo.doctors?.name} — CRM {vinculo.doctors?.crm}
+                {vinculo.juridico_profissionais?.nome} — {vinculo.juridico_profissionais?.registro_conselho || "Sem registro"}
               </p>
             </div>
           </div>
@@ -160,14 +159,10 @@ export default function JuridicoRTDetail() {
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-3">Empresa vinculada</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Field label="Razão Social" value={vinculo.issuers?.name} />
-                  <Field label="CNPJ" value={vinculo.issuers?.cnpj} />
-                  <Field label="Cidade/UF" value={
-                    vinculo.issuers ? `${(vinculo.issuers as any).city}/${(vinculo.issuers as any).state}` : null
-                  } />
-                  <Field label="Alíquota ISS" value={
-                    vinculo.issuers ? `${(vinculo.issuers as any).iss_rate}%` : null
-                  } />
+                  <Field label="Razão Social" value={vinculo.juridico_empresas?.nome} />
+                  <Field label="CNPJ" value={vinculo.juridico_empresas?.cnpj} />
+                  <Field label="Cidade" value={vinculo.juridico_empresas?.cidade} />
+                  <Field label="UF" value={vinculo.juridico_empresas?.uf} />
                 </div>
               </div>
 
@@ -177,10 +172,10 @@ export default function JuridicoRTDetail() {
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-3">Profissional vinculado</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Field label="Nome" value={vinculo.doctors?.name} />
-                  <Field label="CRM" value={vinculo.doctors?.crm} />
-                  <Field label="CPF" value={(vinculo.doctors as any)?.cpf} />
-                  <Field label="Telefone" value={(vinculo.doctors as any)?.phone} />
+                  <Field label="Nome" value={vinculo.juridico_profissionais?.nome} />
+                  <Field label="Registro" value={vinculo.juridico_profissionais?.registro_conselho} />
+                  <Field label="CPF" value={vinculo.juridico_profissionais?.cpf} />
+                  <Field label="Telefone" value={vinculo.juridico_profissionais?.telefone} />
                 </div>
               </div>
 
@@ -293,8 +288,8 @@ export default function JuridicoRTDetail() {
         open={formOpen}
         onOpenChange={(open) => { if (!open) setFormOpen(false); }}
         vinculo={vinculo}
-        doctors={doctors || []}
-        issuers={issuers || []}
+        profissionais={profissionais || []}
+        empresas={empresas || []}
       />
     </AppLayout>
   );

@@ -10,19 +10,10 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -40,6 +31,8 @@ export type VinculoRT = {
   id: string;
   profissional_id: string;
   empresa_id: string;
+  juridico_profissional_id: string | null;
+  juridico_empresa_id: string | null;
   conselho_pj: string | null;
   uf_conselho_pj: string | null;
   registro_pj: string | null;
@@ -52,8 +45,8 @@ export type VinculoRT = {
   tenant_id: string | null;
   created_at: string;
   updated_at: string;
-  doctors: { name: string; crm: string } | null;
-  issuers: { name: string; cnpj: string } | null;
+  juridico_profissionais: { nome: string; registro_conselho: string | null } | null;
+  juridico_empresas: { nome: string; cnpj: string | null } | null;
 };
 
 export default function JuridicoRTs() {
@@ -65,20 +58,18 @@ export default function JuridicoRTs() {
   const [editingVinculo, setEditingVinculo] = useState<VinculoRT | null>(null);
   const [viewingVinculo, setViewingVinculo] = useState<VinculoRT | null>(null);
 
-  // Filters
   const [filterEmpresa, setFilterEmpresa] = useState<string>("all");
   const [filterProfissional, setFilterProfissional] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUf, setFilterUf] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch vínculos
   const { data: vinculos, isLoading } = useQuery({
     queryKey: ["vinculos_rt", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vinculos_rt" as any)
-        .select("*, doctors(name, crm), issuers(name, cnpj)")
+        .select("*, juridico_profissionais(nome, registro_conselho), juridico_empresas(nome, cnpj)")
         .eq("tenant_id", tenant?.id)
         .order("data_validade", { ascending: true, nullsFirst: false });
       if (error) throw error;
@@ -87,38 +78,36 @@ export default function JuridicoRTs() {
     enabled: !!tenant?.id,
   });
 
-  // Fetch doctors for filter
-  const { data: doctors } = useQuery({
-    queryKey: ["doctors_list", tenant?.id],
+  // Fetch profissionais for filter
+  const { data: profissionais } = useQuery({
+    queryKey: ["juridico_profissionais", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("doctors")
-        .select("id, name, crm")
+        .from("juridico_profissionais" as any)
+        .select("id, nome, registro_conselho")
         .eq("tenant_id", tenant?.id)
-        .order("name");
+        .order("nome");
       if (error) throw error;
-      return data;
+      return data as unknown as { id: string; nome: string; registro_conselho: string | null }[];
     },
     enabled: !!tenant?.id,
   });
 
-  // Fetch issuers for filter
-  const { data: issuers } = useQuery({
-    queryKey: ["issuers_list", tenant?.id],
+  // Fetch empresas for filter
+  const { data: empresas } = useQuery({
+    queryKey: ["juridico_empresas", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("issuers")
-        .select("id, name, cnpj")
+        .from("juridico_empresas" as any)
+        .select("id, nome, cnpj")
         .eq("tenant_id", tenant?.id)
-        .eq("active", true)
-        .order("name");
+        .order("nome");
       if (error) throw error;
-      return data;
+      return data as unknown as { id: string; nome: string; cnpj: string | null }[];
     },
     enabled: !!tenant?.id,
   });
 
-  // Filtered data with computed status
   const filteredVinculos = useMemo(() => {
     if (!vinculos) return [];
     return vinculos
@@ -127,18 +116,18 @@ export default function JuridicoRTs() {
         _statusInfo: computeRTStatus(v.status, v.data_validade),
       }))
       .filter((v) => {
-        if (filterEmpresa !== "all" && v.empresa_id !== filterEmpresa) return false;
-        if (filterProfissional !== "all" && v.profissional_id !== filterProfissional) return false;
+        if (filterEmpresa !== "all" && (v.juridico_empresa_id || v.empresa_id) !== filterEmpresa) return false;
+        if (filterProfissional !== "all" && (v.juridico_profissional_id || v.profissional_id) !== filterProfissional) return false;
         if (filterStatus !== "all" && v._statusInfo.computed !== filterStatus) return false;
         if (filterUf !== "all" && v.uf_conselho_pj !== filterUf) return false;
         if (searchTerm) {
           const term = searchTerm.toLowerCase();
-          const matchName = v.doctors?.name?.toLowerCase().includes(term);
-          const matchCrm = v.doctors?.crm?.toLowerCase().includes(term);
-          const matchEmpresa = v.issuers?.name?.toLowerCase().includes(term);
-          const matchCnpj = v.issuers?.cnpj?.toLowerCase().includes(term);
-          const matchRegistro = v.registro_pj?.toLowerCase().includes(term);
-          if (!matchName && !matchCrm && !matchEmpresa && !matchCnpj && !matchRegistro) return false;
+          const matchName = v.juridico_profissionais?.nome?.toLowerCase().includes(term);
+          const matchRegistro = v.juridico_profissionais?.registro_conselho?.toLowerCase().includes(term);
+          const matchEmpresa = v.juridico_empresas?.nome?.toLowerCase().includes(term);
+          const matchCnpj = v.juridico_empresas?.cnpj?.toLowerCase().includes(term);
+          const matchRegPJ = v.registro_pj?.toLowerCase().includes(term);
+          if (!matchName && !matchRegistro && !matchEmpresa && !matchCnpj && !matchRegPJ) return false;
         }
         return true;
       });
@@ -167,14 +156,11 @@ export default function JuridicoRTs() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <ShieldCheck className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                Controle de RTs
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Controle de RTs</h1>
               <p className="text-muted-foreground">
                 Gerencie os vínculos de Responsabilidade Técnica entre profissionais e empresas.
               </p>
@@ -204,8 +190,8 @@ export default function JuridicoRTs() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as empresas</SelectItem>
-                {issuers?.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                {empresas?.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -215,8 +201,8 @@ export default function JuridicoRTs() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os profissionais</SelectItem>
-                {doctors?.map((d) => (
-                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                {profissionais?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -264,7 +250,7 @@ export default function JuridicoRTs() {
                 <TableHead>Empresa</TableHead>
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Profissional</TableHead>
-                <TableHead>CRM</TableHead>
+                <TableHead>Registro</TableHead>
                 <TableHead>Registro PJ</TableHead>
                 <TableHead>Conselho</TableHead>
                 <TableHead>Validade</TableHead>
@@ -300,10 +286,10 @@ export default function JuridicoRTs() {
                   const { label, badgeClass, diasParaVencimento, computed } = v._statusInfo;
                   return (
                     <TableRow key={v.id}>
-                      <TableCell className="font-medium">{v.issuers?.name || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm font-mono">{v.issuers?.cnpj || "—"}</TableCell>
-                      <TableCell className="font-medium">{v.doctors?.name || "—"}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{v.doctors?.crm || "—"}</TableCell>
+                      <TableCell className="font-medium">{v.juridico_empresas?.nome || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm font-mono">{v.juridico_empresas?.cnpj || "—"}</TableCell>
+                      <TableCell className="font-medium">{v.juridico_profissionais?.nome || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{v.juridico_profissionais?.registro_conselho || "—"}</TableCell>
                       <TableCell>{v.registro_pj || "—"}</TableCell>
                       <TableCell>
                         {v.conselho_pj
@@ -374,7 +360,6 @@ export default function JuridicoRTs() {
         </div>
       </div>
 
-      {/* Dialogs */}
       <VinculoRTFormDialog
         open={formOpen}
         onOpenChange={(open) => {
@@ -384,8 +369,8 @@ export default function JuridicoRTs() {
           }
         }}
         vinculo={editingVinculo}
-        doctors={doctors || []}
-        issuers={issuers || []}
+        profissionais={profissionais || []}
+        empresas={empresas || []}
       />
 
       <VinculoRTViewDialog

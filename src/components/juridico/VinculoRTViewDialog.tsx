@@ -54,8 +54,8 @@ export function VinculoRTViewDialog({ open, onOpenChange, vinculo }: Props) {
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Profissional</h4>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Nome" value={vinculo.doctors?.name} />
-              <Field label="CRM" value={vinculo.doctors?.crm} />
+              <Field label="Nome" value={vinculo.juridico_profissionais?.nome} />
+              <Field label="Registro" value={vinculo.juridico_profissionais?.registro_conselho} />
             </div>
           </div>
 
@@ -64,8 +64,8 @@ export function VinculoRTViewDialog({ open, onOpenChange, vinculo }: Props) {
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Empresa</h4>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Razão Social" value={vinculo.issuers?.name} />
-              <Field label="CNPJ" value={vinculo.issuers?.cnpj} />
+              <Field label="Razão Social" value={vinculo.juridico_empresas?.nome} />
+              <Field label="CNPJ" value={vinculo.juridico_empresas?.cnpj} />
             </div>
           </div>
 
