@@ -30,6 +30,8 @@ import { useQuery } from "@tanstack/react-query";
 const formSchema = z.object({
   juridico_empresa_id: z.string().min(1, "Selecione a empresa"),
   fornecedor_nome: z.string().min(1, "Informe o fornecedor"),
+  telefone_fornecedor: z.string().optional(),
+  site_fornecedor: z.string().optional(),
   data_contratacao: z.date({ required_error: "Informe a data de contratação" }),
   data_vencimento: z.date().optional().nullable(),
   status: z.string().default("ativo"),
@@ -68,6 +70,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     defaultValues: {
       juridico_empresa_id: "",
       fornecedor_nome: "",
+      telefone_fornecedor: "",
+      site_fornecedor: "",
       data_contratacao: new Date(),
       data_vencimento: null,
       status: "ativo",
@@ -80,6 +84,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       form.reset({
         juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
         fornecedor_nome: contrato.fornecedor_nome,
+        telefone_fornecedor: contrato.telefone_fornecedor || "",
+        site_fornecedor: contrato.site_fornecedor || "",
         data_contratacao: new Date(contrato.data_contratacao + "T00:00:00"),
         data_vencimento: contrato.data_vencimento ? new Date(contrato.data_vencimento + "T00:00:00") : null,
         status: contrato.status,
@@ -89,6 +95,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       form.reset({
         juridico_empresa_id: "",
         fornecedor_nome: "",
+        telefone_fornecedor: "",
+        site_fornecedor: "",
         data_contratacao: new Date(),
         data_vencimento: null,
         status: "ativo",
@@ -101,9 +109,11 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     setSaving(true);
     try {
       const payload = {
-        issuer_id: values.juridico_empresa_id, // keep old column in sync
+        issuer_id: values.juridico_empresa_id,
         juridico_empresa_id: values.juridico_empresa_id,
         fornecedor_nome: values.fornecedor_nome,
+        telefone_fornecedor: values.telefone_fornecedor || null,
+        site_fornecedor: values.site_fornecedor || null,
         data_contratacao: format(values.data_contratacao, "yyyy-MM-dd"),
         data_vencimento: values.data_vencimento ? format(values.data_vencimento, "yyyy-MM-dd") : null,
         status: values.status,
@@ -181,6 +191,36 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                 </FormItem>
               )}
             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="telefone_fornecedor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone do Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="(00) 00000-0000" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="site_fornecedor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site do Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://exemplo.com" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

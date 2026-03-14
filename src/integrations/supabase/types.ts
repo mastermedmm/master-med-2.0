@@ -431,7 +431,9 @@ export type Database = {
           issuer_id: string
           juridico_empresa_id: string | null
           observacoes: string | null
+          site_fornecedor: string | null
           status: string
+          telefone_fornecedor: string | null
           tenant_id: string | null
           updated_at: string
         }
@@ -444,7 +446,9 @@ export type Database = {
           issuer_id: string
           juridico_empresa_id?: string | null
           observacoes?: string | null
+          site_fornecedor?: string | null
           status?: string
+          telefone_fornecedor?: string | null
           tenant_id?: string | null
           updated_at?: string
         }
@@ -457,7 +461,9 @@ export type Database = {
           issuer_id?: string
           juridico_empresa_id?: string | null
           observacoes?: string | null
+          site_fornecedor?: string | null
           status?: string
+          telefone_fornecedor?: string | null
           tenant_id?: string | null
           updated_at?: string
         }
