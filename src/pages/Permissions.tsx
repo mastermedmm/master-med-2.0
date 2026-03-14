@@ -60,6 +60,8 @@ const MODULE_LABELS: Record<ModuleName, string> = {
   'nfse.reprocessar': 'NFSE - Reprocessar',
   'juridico.contratos': 'Jurídico - Contratos',
   'juridico.rts': 'Jurídico - RTs',
+  'juridico.profissionais': 'Jurídico - Profissionais',
+  'juridico.empresas': 'Jurídico - Empresas',
 };
 
 const PERMISSION_LABELS = {
