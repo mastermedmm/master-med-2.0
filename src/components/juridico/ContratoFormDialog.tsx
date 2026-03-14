@@ -66,6 +66,20 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     enabled: !!tenantId,
   });
 
+  const { data: tiposContrato = [] } = useQuery({
+    queryKey: ["juridico_tipos_contrato", tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("juridico_tipos_contrato" as any)
+        .select("id, nome")
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .order("nome");
+      return (data as unknown as { id: string; nome: string }[]) || [];
+    },
+    enabled: !!tenantId,
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
