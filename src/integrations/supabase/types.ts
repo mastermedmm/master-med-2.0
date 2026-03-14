@@ -435,6 +435,7 @@ export type Database = {
           status: string
           telefone_fornecedor: string | null
           tenant_id: string | null
+          tipo_contrato_id: string | null
           updated_at: string
         }
         Insert: {
@@ -450,6 +451,7 @@ export type Database = {
           status?: string
           telefone_fornecedor?: string | null
           tenant_id?: string | null
+          tipo_contrato_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -465,6 +467,7 @@ export type Database = {
           status?: string
           telefone_fornecedor?: string | null
           tenant_id?: string | null
+          tipo_contrato_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -487,6 +490,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_tipo_contrato_id_fkey"
+            columns: ["tipo_contrato_id"]
+            isOneToOne: false
+            referencedRelation: "juridico_tipos_contrato"
             referencedColumns: ["id"]
           },
         ]
