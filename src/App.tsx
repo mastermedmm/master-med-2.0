@@ -56,6 +56,7 @@ import NfseTomadores from "./pages/nfse/NfseTomadores";
 import JuridicoProfissionais from "./pages/juridico/JuridicoProfissionais";
 import JuridicoEmpresas from "./pages/juridico/JuridicoEmpresas";
 import JuridicoContratos from "./pages/juridico/JuridicoContratos";
+import JuridicoTiposContrato from "./pages/juridico/JuridicoTiposContrato";
 import JuridicoRTs from "./pages/juridico/JuridicoRTs";
 import JuridicoRTDetail from "./pages/juridico/JuridicoRTDetail";
 // Doctor Portal Pages
