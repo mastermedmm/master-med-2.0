@@ -129,6 +129,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       const payload = {
         issuer_id: values.juridico_empresa_id,
         juridico_empresa_id: values.juridico_empresa_id,
+        tipo_contrato_id: values.tipo_contrato_id || null,
         fornecedor_nome: values.fornecedor_nome,
         telefone_fornecedor: values.telefone_fornecedor || null,
         site_fornecedor: values.site_fornecedor || null,
