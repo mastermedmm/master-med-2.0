@@ -99,6 +99,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     if (contrato) {
       form.reset({
         juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
+        tipo_contrato_id: contrato.tipo_contrato_id || "",
         fornecedor_nome: contrato.fornecedor_nome,
         telefone_fornecedor: contrato.telefone_fornecedor || "",
         site_fornecedor: contrato.site_fornecedor || "",
