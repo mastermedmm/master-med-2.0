@@ -312,6 +312,8 @@ function AppRoutes() {
       <Route path={ROUTES.nfse.tomadores} element={<ProtectedRoute><NfseTomadores /></ProtectedRoute>} />
       
       {/* Juridico Routes */}
+      <Route path={ROUTES.juridico.profissionais} element={<ProtectedRoute><JuridicoProfissionais /></ProtectedRoute>} />
+      <Route path={ROUTES.juridico.empresas} element={<ProtectedRoute><JuridicoEmpresas /></ProtectedRoute>} />
       <Route path={ROUTES.juridico.contratos} element={<ProtectedRoute><JuridicoContratos /></ProtectedRoute>} />
       <Route path={ROUTES.juridico.rts} element={<ProtectedRoute><JuridicoRTs /></ProtectedRoute>} />
       <Route path="/juridico/rts/:id" element={<ProtectedRoute><JuridicoRTDetail /></ProtectedRoute>} />
