@@ -21,6 +21,25 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { tenantId } = useTenant();
+  const { hasAnyPermission, loading: permLoading, permissions } = usePermissions();
+  const firstRoute = useFirstAccessibleRoute();
+
+  // If permissions loaded and user has no dashboard access, redirect
+  if (!permLoading && permissions.length > 0 && !hasAnyPermission('dashboard')) {
+    if (firstRoute) {
+      return <Navigate to={firstRoute} replace />;
+    }
+  }
+
+  if (permLoading && permissions.length === 0) {
+    return (
+      <AppLayout>
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
   const [stats, setStats] = useState<DashboardStats>({
     totalInvoices: 0,
     pendingReceipts: 0,
