@@ -1691,6 +1691,41 @@ export type Database = {
           },
         ]
       }
+      juridico_tipos_contrato: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          nome: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "juridico_tipos_contrato_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       licensee_sessions: {
         Row: {
           created_at: string
