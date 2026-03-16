@@ -62,9 +62,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
   juridico_empresa_id: z.string().min(1, "Selecione a empresa"),
