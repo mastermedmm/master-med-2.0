@@ -423,6 +423,7 @@ export type Database = {
       }
       contratos: {
         Row: {
+          cnpj_fornecedor: string | null
           created_at: string
           data_contratacao: string
           data_vencimento: string | null
@@ -439,6 +440,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cnpj_fornecedor?: string | null
           created_at?: string
           data_contratacao: string
           data_vencimento?: string | null
@@ -455,6 +457,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cnpj_fornecedor?: string | null
           created_at?: string
           data_contratacao?: string
           data_vencimento?: string | null
