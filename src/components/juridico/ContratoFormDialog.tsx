@@ -15,6 +15,27 @@ const formatCnpj = (cnpj: string) => {
   return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 };
 
+const applyCnpjMask = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+};
+
+const applyPhoneMask = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/^(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .replace(/^(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+};
+
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -37,6 +58,7 @@ const formSchema = z.object({
   juridico_empresa_id: z.string().min(1, "Selecione a empresa"),
   tipo_contrato_id: z.string().optional(),
   fornecedor_nome: z.string().min(1, "Informe o fornecedor"),
+  cnpj_fornecedor: z.string().optional(),
   telefone_fornecedor: z.string().optional(),
   site_fornecedor: z.string().optional(),
   data_contratacao: z.date({ required_error: "Informe a data de contratação" }),
@@ -92,6 +114,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       juridico_empresa_id: "",
       tipo_contrato_id: "",
       fornecedor_nome: "",
+      cnpj_fornecedor: "",
       telefone_fornecedor: "",
       site_fornecedor: "",
       data_contratacao: new Date(),
@@ -107,7 +130,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
         tipo_contrato_id: contrato.tipo_contrato_id || "",
         fornecedor_nome: contrato.fornecedor_nome,
-        telefone_fornecedor: contrato.telefone_fornecedor || "",
+        cnpj_fornecedor: contrato.cnpj_fornecedor ? applyCnpjMask(contrato.cnpj_fornecedor) : "",
+        telefone_fornecedor: contrato.telefone_fornecedor ? applyPhoneMask(contrato.telefone_fornecedor) : "",
         site_fornecedor: contrato.site_fornecedor || "",
         data_contratacao: new Date(contrato.data_contratacao + "T00:00:00"),
         data_vencimento: contrato.data_vencimento ? new Date(contrato.data_vencimento + "T00:00:00") : null,
@@ -119,6 +143,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         juridico_empresa_id: "",
         tipo_contrato_id: "",
         fornecedor_nome: "",
+        cnpj_fornecedor: "",
         telefone_fornecedor: "",
         site_fornecedor: "",
         data_contratacao: new Date(),
@@ -137,7 +162,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         juridico_empresa_id: values.juridico_empresa_id,
         tipo_contrato_id: values.tipo_contrato_id || null,
         fornecedor_nome: values.fornecedor_nome,
-        telefone_fornecedor: values.telefone_fornecedor || null,
+        cnpj_fornecedor: values.cnpj_fornecedor ? values.cnpj_fornecedor.replace(/\D/g, "") : null,
+        telefone_fornecedor: values.telefone_fornecedor ? values.telefone_fornecedor.replace(/\D/g, "") : null,
         site_fornecedor: values.site_fornecedor || null,
         data_contratacao: format(values.data_contratacao, "yyyy-MM-dd"),
         data_vencimento: values.data_vencimento ? format(values.data_vencimento, "yyyy-MM-dd") : null,
@@ -228,19 +254,39 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="fornecedor_nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fornecedor</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Nome do fornecedor" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="fornecedor_nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Nome do fornecedor" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="cnpj_fornecedor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CNPJ do Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="00.000.000/0000-00"
+                        onChange={(e) => field.onChange(applyCnpjMask(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -250,7 +296,11 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                   <FormItem>
                     <FormLabel>Telefone do Fornecedor</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="(00) 00000-0000" />
+                      <Input
+                        {...field}
+                        placeholder="(00) 00000-0000"
+                        onChange={(e) => field.onChange(applyPhoneMask(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
