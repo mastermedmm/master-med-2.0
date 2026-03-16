@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FileSignature, Plus, Pencil, Search, X, AlertTriangle } from "lucide-react";
+import { differenceInDays } from "date-fns";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
