@@ -50,7 +50,6 @@ export default function JuridicoEmpresas() {
   useDocumentTitle("Empresas - Jurídico");
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const queryClient = useQueryClient();
-  const queryClient = useQueryClient();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Empresa | null>(null);
