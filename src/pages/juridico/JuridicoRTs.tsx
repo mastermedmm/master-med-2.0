@@ -29,8 +29,8 @@ const UF_OPTIONS = [
 
 export type VinculoRT = {
   id: string;
-  profissional_id: string;
-  empresa_id: string;
+  profissional_id: string | null;
+  empresa_id: string | null;
   juridico_profissional_id: string | null;
   juridico_empresa_id: string | null;
   conselho_pj: string | null;

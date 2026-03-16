@@ -132,8 +132,6 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const payload = {
-        profissional_id: data.juridico_profissional_id,
-        empresa_id: data.juridico_empresa_id,
         juridico_profissional_id: data.juridico_profissional_id,
         juridico_empresa_id: data.juridico_empresa_id,
         conselho_pj: data.conselho_pj || null,
