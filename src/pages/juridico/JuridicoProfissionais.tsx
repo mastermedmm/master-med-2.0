@@ -64,17 +64,15 @@ export default function JuridicoProfissionais() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: profissionais = [], isLoading } = useQuery({
-    queryKey: ["juridico_profissionais", tenantId],
+    queryKey: ["juridico_profissionais"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("juridico_profissionais" as any)
         .select("*")
-        .eq("tenant_id", tenantId)
         .order("nome");
       if (error) throw error;
       return data as unknown as Profissional[];
     },
-    enabled: !!tenantId,
   });
 
   const filtered = useMemo(() => {
