@@ -156,6 +156,7 @@ export default function JuridicoContratos() {
                 <TableHead>Telefone</TableHead>
                 <TableHead>Contratação</TableHead>
                 <TableHead>Vencimento</TableHead>
+                <TableHead>Dias p/ Vencimento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[80px]">Ações</TableHead>
               </TableRow>
