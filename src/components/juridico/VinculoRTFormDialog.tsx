@@ -80,6 +80,17 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
 
   const [form, setForm] = useState<FormData>(emptyForm);
 
+  const hasProfissionais = profissionais.length > 0;
+  const hasEmpresas = empresas.length > 0;
+  const canSubmit = hasProfissionais && hasEmpresas;
+  const missingDependenciesMessage = !hasProfissionais && !hasEmpresas
+    ? "Cadastre pelo menos um profissional e uma empresa no Jurídico deste tenant antes de criar o vínculo RT."
+    : !hasProfissionais
+      ? "Cadastre pelo menos um profissional no Jurídico deste tenant antes de criar o vínculo RT."
+      : !hasEmpresas
+        ? "Cadastre pelo menos uma empresa no Jurídico deste tenant antes de criar o vínculo RT."
+        : null;
+
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen && vinculo) {
       setForm({
