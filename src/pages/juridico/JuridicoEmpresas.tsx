@@ -58,17 +58,15 @@ export default function JuridicoEmpresas() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: empresas = [], isLoading } = useQuery({
-    queryKey: ["juridico_empresas", tenantId],
+    queryKey: ["juridico_empresas"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("juridico_empresas" as any)
         .select("*")
-        .eq("tenant_id", tenantId)
         .order("nome");
       if (error) throw error;
       return data as unknown as Empresa[];
     },
-    enabled: !!tenantId,
   });
 
   const filtered = useMemo(() => {
