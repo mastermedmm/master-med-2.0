@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { format, parse, isValid } from "date-fns";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+
 
 const formatCnpj = (cnpj: string) => {
   const digits = cnpj.replace(/\D/g, "");
@@ -36,6 +36,19 @@ const applyPhoneMask = (value: string) => {
     .replace(/(\d{5})(\d)/, "$1-$2");
 };
 
+const applyDateMask = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  return digits
+    .replace(/^(\d{2})(\d)/, "$1/$2")
+    .replace(/^(\d{2})\/(\d{2})(\d)/, "$1/$2/$3");
+};
+
+const parseDateString = (value: string): Date | null => {
+  if (!value || value.length < 10) return null;
+  const parsed = parse(value, "dd/MM/yyyy", new Date());
+  return isValid(parsed) ? parsed : null;
+};
+
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -48,10 +61,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { useQuery } from "@tanstack/react-query";
 
 const formSchema = z.object({
@@ -61,8 +70,8 @@ const formSchema = z.object({
   cnpj_fornecedor: z.string().optional(),
   telefone_fornecedor: z.string().optional(),
   site_fornecedor: z.string().optional(),
-  data_contratacao: z.date({ required_error: "Informe a data de contratação" }),
-  data_vencimento: z.date().optional().nullable(),
+  data_contratacao: z.string().min(10, "Informe a data de contratação (dd/mm/aaaa)"),
+  data_vencimento: z.string().optional(),
   status: z.string().default("ativo"),
   observacoes: z.string().optional(),
 });
@@ -131,8 +140,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       cnpj_fornecedor: "",
       telefone_fornecedor: "",
       site_fornecedor: "",
-      data_contratacao: new Date(),
-      data_vencimento: null,
+      data_contratacao: format(new Date(), "dd/MM/yyyy"),
+      data_vencimento: "",
       status: "ativo",
       observacoes: "",
     },
@@ -140,6 +149,10 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
 
   useEffect(() => {
     if (contrato) {
+      const fmtDate = (d: string) => {
+        const [y, m, dd] = d.split("-");
+        return `${dd}/${m}/${y}`;
+      };
       form.reset({
         juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
         tipo_contrato_id: contrato.tipo_contrato_id || "",
@@ -147,8 +160,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         cnpj_fornecedor: contrato.cnpj_fornecedor ? applyCnpjMask(contrato.cnpj_fornecedor) : "",
         telefone_fornecedor: contrato.telefone_fornecedor ? applyPhoneMask(contrato.telefone_fornecedor) : "",
         site_fornecedor: contrato.site_fornecedor || "",
-        data_contratacao: new Date(contrato.data_contratacao + "T00:00:00"),
-        data_vencimento: contrato.data_vencimento ? new Date(contrato.data_vencimento + "T00:00:00") : null,
+        data_contratacao: fmtDate(contrato.data_contratacao),
+        data_vencimento: contrato.data_vencimento ? fmtDate(contrato.data_vencimento) : "",
         status: contrato.status,
         observacoes: contrato.observacoes || "",
       });
@@ -160,8 +173,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         cnpj_fornecedor: "",
         telefone_fornecedor: "",
         site_fornecedor: "",
-        data_contratacao: new Date(),
-        data_vencimento: null,
+        data_contratacao: format(new Date(), "dd/MM/yyyy"),
+        data_vencimento: "",
         status: "ativo",
         observacoes: "",
       });
@@ -185,6 +198,19 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         return;
       }
 
+      const contratacaoDate = parseDateString(values.data_contratacao);
+      if (!contratacaoDate) {
+        toast({ title: "Data de contratação inválida", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+      const vencimentoDate = values.data_vencimento ? parseDateString(values.data_vencimento) : null;
+      if (values.data_vencimento && values.data_vencimento.length >= 10 && !vencimentoDate) {
+        toast({ title: "Data de vencimento inválida", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
       const payload: any = {
         issuer_id: issuerId,
         juridico_empresa_id: values.juridico_empresa_id,
@@ -193,8 +219,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         cnpj_fornecedor: values.cnpj_fornecedor ? values.cnpj_fornecedor.replace(/\D/g, "") : null,
         telefone_fornecedor: values.telefone_fornecedor ? values.telefone_fornecedor.replace(/\D/g, "") : null,
         site_fornecedor: values.site_fornecedor || null,
-        data_contratacao: format(values.data_contratacao, "yyyy-MM-dd"),
-        data_vencimento: values.data_vencimento ? format(values.data_vencimento, "yyyy-MM-dd") : null,
+        data_contratacao: format(contratacaoDate, "yyyy-MM-dd"),
+        data_vencimento: vencimentoDate ? format(vencimentoDate, "yyyy-MM-dd") : null,
         status: values.status,
         observacoes: values.observacoes || null,
         tenant_id: tenantId,
@@ -355,30 +381,15 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                 control={form.control}
                 name="data_contratacao"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Data de Contratação</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? format(field.value, "dd/MM/yyyy") : "Selecione"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="dd/mm/aaaa"
+                        onChange={(e) => field.onChange(applyDateMask(e.target.value))}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -388,30 +399,15 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                 control={form.control}
                 name="data_vencimento"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Data de Vencimento</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? format(field.value, "dd/MM/yyyy") : "Sem vencimento"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value || undefined}
-                          onSelect={field.onChange}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="dd/mm/aaaa"
+                        onChange={(e) => field.onChange(applyDateMask(e.target.value))}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FileSignature, Plus, Pencil, Search, X, AlertTriangle } from "lucide-react";
+import { differenceInDays } from "date-fns";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -155,6 +156,7 @@ export default function JuridicoContratos() {
                 <TableHead>Telefone</TableHead>
                 <TableHead>Contratação</TableHead>
                 <TableHead>Vencimento</TableHead>
+                <TableHead>Dias p/ Vencimento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[80px]">Ações</TableHead>
               </TableRow>
@@ -163,14 +165,14 @@ export default function JuridicoContratos() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                     {Array.from({ length: 8 }).map((_, j) => (
+                     {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                     Nenhum contrato encontrado.
                   </TableCell>
                 </TableRow>
@@ -189,6 +191,14 @@ export default function JuridicoContratos() {
                         {c.data_vencimento
                           ? format(new Date(c.data_vencimento + "T00:00:00"), "dd/MM/yyyy")
                           : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {c.data_vencimento && c.status === "ativo" ? (() => {
+                          const dias = differenceInDays(new Date(c.data_vencimento + "T00:00:00"), new Date());
+                          if (dias < 0) return <span className="text-destructive font-medium">Vencido há {Math.abs(dias)} dias</span>;
+                          if (dias === 0) return <span className="text-amber-500 font-medium">Vence hoje</span>;
+                          return <span className={cn("font-medium", dias <= 30 ? "text-amber-500" : "text-muted-foreground")}>{dias} dias</span>;
+                        })() : "—"}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
