@@ -193,7 +193,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                     <SelectContent>
                       {empresas.map((e) => (
                         <SelectItem key={e.id} value={e.id}>
-                          {e.nome} {e.cnpj ? `(${e.cnpj})` : ""}
+                          {e.nome} {e.cnpj ? `(${formatCnpj(e.cnpj)})` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
