@@ -381,30 +381,15 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                 control={form.control}
                 name="data_contratacao"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Data de Contratação</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? format(field.value, "dd/MM/yyyy") : "Selecione"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="dd/mm/aaaa"
+                        onChange={(e) => field.onChange(applyDateMask(e.target.value))}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -414,30 +399,15 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                 control={form.control}
                 name="data_vencimento"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Data de Vencimento</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? format(field.value, "dd/MM/yyyy") : "Sem vencimento"}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value || undefined}
-                          onSelect={field.onChange}
-                          initialFocus
-                          className="p-3 pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="dd/mm/aaaa"
+                        onChange={(e) => field.onChange(applyDateMask(e.target.value))}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
