@@ -58,6 +58,7 @@ const formSchema = z.object({
   juridico_empresa_id: z.string().min(1, "Selecione a empresa"),
   tipo_contrato_id: z.string().optional(),
   fornecedor_nome: z.string().min(1, "Informe o fornecedor"),
+  cnpj_fornecedor: z.string().optional(),
   telefone_fornecedor: z.string().optional(),
   site_fornecedor: z.string().optional(),
   data_contratacao: z.date({ required_error: "Informe a data de contratação" }),
