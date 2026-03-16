@@ -193,6 +193,13 @@ export default function JuridicoContratos() {
                           : "—"}
                       </TableCell>
                       <TableCell>
+                        {c.data_vencimento && c.status === "ativo" ? (() => {
+                          const dias = differenceInDays(new Date(c.data_vencimento + "T00:00:00"), new Date());
+                          if (dias < 0) return <span className="text-destructive font-medium">Vencido há {Math.abs(dias)} dias</span>;
+                          if (dias === 0) return <span className="text-amber-500 font-medium">Vence hoje</span>;
+                          return <span className={cn("font-medium", dias <= 30 ? "text-amber-500" : "text-muted-foreground")}>{dias} dias</span>;
+                        })() : "—"}
+                      </TableCell>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className={cn("text-xs", statusInfo.badgeClass)}>
                             {statusInfo.label}
