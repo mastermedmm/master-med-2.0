@@ -157,7 +157,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
   const onSubmit = async (values: FormValues) => {
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         issuer_id: values.juridico_empresa_id,
         juridico_empresa_id: values.juridico_empresa_id,
         tipo_contrato_id: values.tipo_contrato_id || null,
