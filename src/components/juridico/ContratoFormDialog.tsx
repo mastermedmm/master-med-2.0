@@ -114,6 +114,7 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
       juridico_empresa_id: "",
       tipo_contrato_id: "",
       fornecedor_nome: "",
+      cnpj_fornecedor: "",
       telefone_fornecedor: "",
       site_fornecedor: "",
       data_contratacao: new Date(),
