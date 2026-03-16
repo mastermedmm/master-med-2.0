@@ -203,6 +203,7 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
       setForm(emptyForm);
     },
     onError: (err: any) => {
+      console.error("Erro ao salvar vínculo RT:", err, JSON.stringify(err));
       if (err?.message?.includes("idx_vinculos_rt_unique")) {
         toast.error("Já existe um vínculo ativo entre este profissional e esta empresa.");
       } else {
