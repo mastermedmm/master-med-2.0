@@ -395,7 +395,7 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending}>
+            <Button type="submit" disabled={saveMutation.isPending || !canSubmit}>
               {saveMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </div>
