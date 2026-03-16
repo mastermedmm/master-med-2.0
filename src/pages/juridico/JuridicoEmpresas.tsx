@@ -106,7 +106,6 @@ export default function JuridicoEmpresas() {
         cidade: form.cidade || null,
         uf: form.uf || null,
         observacoes: form.observacoes || null,
-        tenant_id: tenantId,
       };
       if (editing) {
         const { error } = await supabase

@@ -118,7 +118,6 @@ export default function JuridicoProfissionais() {
         telefone: form.telefone || null,
         email: form.email || null,
         observacoes: form.observacoes || null,
-        tenant_id: tenantId,
       };
       if (editing) {
         const { error } = await supabase
