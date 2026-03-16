@@ -80,6 +80,17 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
 
   const [form, setForm] = useState<FormData>(emptyForm);
 
+  const hasProfissionais = profissionais.length > 0;
+  const hasEmpresas = empresas.length > 0;
+  const canSubmit = hasProfissionais && hasEmpresas;
+  const missingDependenciesMessage = !hasProfissionais && !hasEmpresas
+    ? "Cadastre pelo menos um profissional e uma empresa no Jurídico deste tenant antes de criar o vínculo RT."
+    : !hasProfissionais
+      ? "Cadastre pelo menos um profissional no Jurídico deste tenant antes de criar o vínculo RT."
+      : !hasEmpresas
+        ? "Cadastre pelo menos uma empresa no Jurídico deste tenant antes de criar o vínculo RT."
+        : null;
+
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen && vinculo) {
       setForm({
@@ -214,10 +225,17 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!canSubmit) {
+      toast.error(missingDependenciesMessage || "Cadastros obrigatórios não encontrados para este tenant.");
+      return;
+    }
+
     if (!form.juridico_profissional_id || !form.juridico_empresa_id) {
       toast.error("Selecione o profissional e a empresa.");
       return;
     }
+
     saveMutation.mutate(form);
   };
 
@@ -227,12 +245,23 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar Vínculo RT" : "Novo Vínculo RT"}</DialogTitle>
         </DialogHeader>
+        {missingDependenciesMessage && (
+          <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground">
+            {missingDependenciesMessage}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Profissional *</Label>
-              <Select value={form.juridico_profissional_id} onValueChange={(v) => setForm({ ...form, juridico_profissional_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <Select
+                value={form.juridico_profissional_id}
+                onValueChange={(v) => setForm({ ...form, juridico_profissional_id: v })}
+                disabled={!hasProfissionais}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={hasProfissionais ? "Selecione..." : "Nenhum profissional cadastrado"} />
+                </SelectTrigger>
                 <SelectContent>
                   {profissionais.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
@@ -244,8 +273,14 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
             </div>
             <div className="space-y-2">
               <Label>Empresa *</Label>
-              <Select value={form.juridico_empresa_id} onValueChange={(v) => setForm({ ...form, juridico_empresa_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <Select
+                value={form.juridico_empresa_id}
+                onValueChange={(v) => setForm({ ...form, juridico_empresa_id: v })}
+                disabled={!hasEmpresas}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={hasEmpresas ? "Selecione..." : "Nenhuma empresa cadastrada"} />
+                </SelectTrigger>
                 <SelectContent>
                   {empresas.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
@@ -360,7 +395,7 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saveMutation.isPending}>
+            <Button type="submit" disabled={saveMutation.isPending || !canSubmit}>
               {saveMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </div>
