@@ -5,7 +5,7 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/hooks/usePermissions";
-import { usePermissions } from "@/hooks/usePermissions";
+import { toast } from "sonner";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
