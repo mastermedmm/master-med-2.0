@@ -200,6 +200,7 @@ export default function JuridicoContratos() {
                           return <span className={cn("font-medium", dias <= 30 ? "text-amber-500" : "text-muted-foreground")}>{dias} dias</span>;
                         })() : "—"}
                       </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className={cn("text-xs", statusInfo.badgeClass)}>
                             {statusInfo.label}
