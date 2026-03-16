@@ -198,6 +198,19 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         return;
       }
 
+      const contratacaoDate = parseDateString(values.data_contratacao);
+      if (!contratacaoDate) {
+        toast({ title: "Data de contratação inválida", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+      const vencimentoDate = values.data_vencimento ? parseDateString(values.data_vencimento) : null;
+      if (values.data_vencimento && values.data_vencimento.length >= 10 && !vencimentoDate) {
+        toast({ title: "Data de vencimento inválida", variant: "destructive" });
+        setSaving(false);
+        return;
+      }
+
       const payload: any = {
         issuer_id: issuerId,
         juridico_empresa_id: values.juridico_empresa_id,
@@ -206,8 +219,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         cnpj_fornecedor: values.cnpj_fornecedor ? values.cnpj_fornecedor.replace(/\D/g, "") : null,
         telefone_fornecedor: values.telefone_fornecedor ? values.telefone_fornecedor.replace(/\D/g, "") : null,
         site_fornecedor: values.site_fornecedor || null,
-        data_contratacao: format(values.data_contratacao, "yyyy-MM-dd"),
-        data_vencimento: values.data_vencimento ? format(values.data_vencimento, "yyyy-MM-dd") : null,
+        data_contratacao: format(contratacaoDate, "yyyy-MM-dd"),
+        data_vencimento: vencimentoDate ? format(vencimentoDate, "yyyy-MM-dd") : null,
         status: values.status,
         observacoes: values.observacoes || null,
         tenant_id: tenantId,
