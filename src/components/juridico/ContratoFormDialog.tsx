@@ -91,17 +91,15 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
   const [saving, setSaving] = useState(false);
 
   const { data: empresas = [] } = useQuery({
-    queryKey: ["juridico_empresas_for_contratos", tenantId],
+    queryKey: ["juridico_empresas_for_contratos"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("juridico_empresas" as any)
         .select("id, nome, cnpj")
-        .eq("tenant_id", tenantId)
         .order("nome");
       if (error) throw error;
       return (data as unknown as { id: string; nome: string; cnpj: string | null }[]) || [];
     },
-    enabled: !!tenantId,
   });
 
   const { data: tiposContrato = [] } = useQuery({
