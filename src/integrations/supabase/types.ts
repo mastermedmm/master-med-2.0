@@ -2743,13 +2743,13 @@ export type Database = {
           created_at: string
           data_inicio_responsabilidade: string | null
           data_validade: string | null
-          empresa_id: string
+          empresa_id: string | null
           id: string
           juridico_empresa_id: string | null
           juridico_profissional_id: string | null
           login_portal_conselho: string | null
           observacoes: string | null
-          profissional_id: string
+          profissional_id: string | null
           registro_pj: string | null
           senha_portal_conselho: string | null
           status: Database["public"]["Enums"]["rt_status"]
@@ -2762,13 +2762,13 @@ export type Database = {
           created_at?: string
           data_inicio_responsabilidade?: string | null
           data_validade?: string | null
-          empresa_id: string
+          empresa_id?: string | null
           id?: string
           juridico_empresa_id?: string | null
           juridico_profissional_id?: string | null
           login_portal_conselho?: string | null
           observacoes?: string | null
-          profissional_id: string
+          profissional_id?: string | null
           registro_pj?: string | null
           senha_portal_conselho?: string | null
           status?: Database["public"]["Enums"]["rt_status"]
@@ -2781,13 +2781,13 @@ export type Database = {
           created_at?: string
           data_inicio_responsabilidade?: string | null
           data_validade?: string | null
-          empresa_id?: string
+          empresa_id?: string | null
           id?: string
           juridico_empresa_id?: string | null
           juridico_profissional_id?: string | null
           login_portal_conselho?: string | null
           observacoes?: string | null
-          profissional_id?: string
+          profissional_id?: string | null
           registro_pj?: string | null
           senha_portal_conselho?: string | null
           status?: Database["public"]["Enums"]["rt_status"]
