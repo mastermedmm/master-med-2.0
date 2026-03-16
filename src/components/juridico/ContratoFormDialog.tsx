@@ -149,6 +149,10 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
 
   useEffect(() => {
     if (contrato) {
+      const fmtDate = (d: string) => {
+        const [y, m, dd] = d.split("-");
+        return `${dd}/${m}/${y}`;
+      };
       form.reset({
         juridico_empresa_id: contrato.juridico_empresa_id || contrato.issuer_id || "",
         tipo_contrato_id: contrato.tipo_contrato_id || "",
@@ -156,8 +160,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         cnpj_fornecedor: contrato.cnpj_fornecedor ? applyCnpjMask(contrato.cnpj_fornecedor) : "",
         telefone_fornecedor: contrato.telefone_fornecedor ? applyPhoneMask(contrato.telefone_fornecedor) : "",
         site_fornecedor: contrato.site_fornecedor || "",
-        data_contratacao: new Date(contrato.data_contratacao + "T00:00:00"),
-        data_vencimento: contrato.data_vencimento ? new Date(contrato.data_vencimento + "T00:00:00") : null,
+        data_contratacao: fmtDate(contrato.data_contratacao),
+        data_vencimento: contrato.data_vencimento ? fmtDate(contrato.data_vencimento) : "",
         status: contrato.status,
         observacoes: contrato.observacoes || "",
       });
@@ -169,8 +173,8 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
         cnpj_fornecedor: "",
         telefone_fornecedor: "",
         site_fornecedor: "",
-        data_contratacao: new Date(),
-        data_vencimento: null,
+        data_contratacao: format(new Date(), "dd/MM/yyyy"),
+        data_vencimento: "",
         status: "ativo",
         observacoes: "",
       });
