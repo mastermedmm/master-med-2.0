@@ -225,10 +225,17 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!canSubmit) {
+      toast.error(missingDependenciesMessage || "Cadastros obrigatórios não encontrados para este tenant.");
+      return;
+    }
+
     if (!form.juridico_profissional_id || !form.juridico_empresa_id) {
       toast.error("Selecione o profissional e a empresa.");
       return;
     }
+
     saveMutation.mutate(form);
   };
 
