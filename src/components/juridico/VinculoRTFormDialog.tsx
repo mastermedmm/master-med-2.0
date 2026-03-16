@@ -245,6 +245,11 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar Vínculo RT" : "Novo Vínculo RT"}</DialogTitle>
         </DialogHeader>
+        {missingDependenciesMessage && (
+          <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-foreground">
+            {missingDependenciesMessage}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
