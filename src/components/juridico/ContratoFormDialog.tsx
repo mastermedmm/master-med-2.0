@@ -170,8 +170,22 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
   const onSubmit = async (values: FormValues) => {
     setSaving(true);
     try {
+      const selectedEmpresa = empresas.find((empresa) => empresa.id === values.juridico_empresa_id);
+      const normalizedEmpresaCnpj = selectedEmpresa?.cnpj?.replace(/\D/g, "") || "";
+      const matchedIssuer = issuers.find((issuer) => issuer.cnpj.replace(/\D/g, "") === normalizedEmpresaCnpj);
+      const issuerId = matchedIssuer?.id || (contrato?.juridico_empresa_id === values.juridico_empresa_id ? contrato.issuer_id : null);
+
+      if (!issuerId) {
+        toast({
+          title: "Empresa sem emitente vinculado",
+          description: "Não encontrei um emissor com o mesmo CNPJ da empresa selecionada.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const payload: any = {
-        issuer_id: values.juridico_empresa_id,
+        issuer_id: issuerId,
         juridico_empresa_id: values.juridico_empresa_id,
         tipo_contrato_id: values.tipo_contrato_id || null,
         fornecedor_nome: values.fornecedor_nome,
