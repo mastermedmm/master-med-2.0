@@ -80,32 +80,28 @@ export default function JuridicoRTs() {
 
   // Fetch profissionais for filter
   const { data: profissionais } = useQuery({
-    queryKey: ["juridico_profissionais", tenant?.id],
+    queryKey: ["juridico_profissionais"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("juridico_profissionais" as any)
         .select("id, nome, registro_conselho")
-        .eq("tenant_id", tenant?.id)
         .order("nome");
       if (error) throw error;
       return data as unknown as { id: string; nome: string; registro_conselho: string | null }[];
     },
-    enabled: !!tenant?.id,
   });
 
   // Fetch empresas for filter
   const { data: empresas } = useQuery({
-    queryKey: ["juridico_empresas", tenant?.id],
+    queryKey: ["juridico_empresas"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("juridico_empresas" as any)
         .select("id, nome, cnpj")
-        .eq("tenant_id", tenant?.id)
         .order("nome");
       if (error) throw error;
       return data as unknown as { id: string; nome: string; cnpj: string | null }[];
     },
-    enabled: !!tenant?.id,
   });
 
   const filteredVinculos = useMemo(() => {

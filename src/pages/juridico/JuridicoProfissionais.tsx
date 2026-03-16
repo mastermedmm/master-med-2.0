@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Users, Plus, Pencil, Trash2, Search, X, Loader2 } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { useTenant } from "@/contexts/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -54,7 +53,6 @@ const emptyForm = {
 
 export default function JuridicoProfissionais() {
   useDocumentTitle("Profissionais - Jurídico");
-  const { tenantId } = useTenant();
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const queryClient = useQueryClient();
 
@@ -64,17 +62,15 @@ export default function JuridicoProfissionais() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: profissionais = [], isLoading } = useQuery({
-    queryKey: ["juridico_profissionais", tenantId],
+    queryKey: ["juridico_profissionais"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("juridico_profissionais" as any)
         .select("*")
-        .eq("tenant_id", tenantId)
         .order("nome");
       if (error) throw error;
       return data as unknown as Profissional[];
     },
-    enabled: !!tenantId,
   });
 
   const filtered = useMemo(() => {
@@ -120,7 +116,6 @@ export default function JuridicoProfissionais() {
         telefone: form.telefone || null,
         email: form.email || null,
         observacoes: form.observacoes || null,
-        tenant_id: tenantId,
       };
       if (editing) {
         const { error } = await supabase
