@@ -70,8 +70,8 @@ const formSchema = z.object({
   cnpj_fornecedor: z.string().optional(),
   telefone_fornecedor: z.string().optional(),
   site_fornecedor: z.string().optional(),
-  data_contratacao: z.date({ required_error: "Informe a data de contratação" }),
-  data_vencimento: z.date().optional().nullable(),
+  data_contratacao: z.string().min(10, "Informe a data de contratação (dd/mm/aaaa)"),
+  data_vencimento: z.string().optional(),
   status: z.string().default("ativo"),
   observacoes: z.string().optional(),
 });
