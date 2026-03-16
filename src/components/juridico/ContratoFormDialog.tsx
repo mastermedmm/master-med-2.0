@@ -254,19 +254,39 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="fornecedor_nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fornecedor</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Nome do fornecedor" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="fornecedor_nome"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Nome do fornecedor" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="cnpj_fornecedor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CNPJ do Fornecedor</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="00.000.000/0000-00"
+                        onChange={(e) => field.onChange(applyCnpjMask(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -276,7 +296,11 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
                   <FormItem>
                     <FormLabel>Telefone do Fornecedor</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="(00) 00000-0000" />
+                      <Input
+                        {...field}
+                        placeholder="(00) 00000-0000"
+                        onChange={(e) => field.onChange(applyPhoneMask(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
