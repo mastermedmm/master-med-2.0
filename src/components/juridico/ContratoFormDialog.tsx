@@ -108,6 +108,19 @@ export function ContratoFormDialog({ open, onOpenChange, onSuccess, contrato }: 
     enabled: !!tenantId,
   });
 
+  const { data: issuers = [] } = useQuery({
+    queryKey: ["issuers_for_contratos", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("issuers")
+        .select("id, cnpj")
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      return (data as { id: string; cnpj: string }[]) || [];
+    },
+    enabled: !!tenantId,
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
