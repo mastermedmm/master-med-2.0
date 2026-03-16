@@ -24,6 +24,18 @@ const applyCnpjMask = (value: string) => {
     .replace(/(\d{4})(\d)/, "$1-$2");
 };
 
+const applyPhoneMask = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 10) {
+    return digits
+      .replace(/^(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
+  }
+  return digits
+    .replace(/^(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
+};
+
 const applyDateMask = (value: string) => {
   const digits = value.replace(/\D/g, "").slice(0, 8);
   return digits
@@ -35,10 +47,6 @@ const parseDateString = (value: string): Date | null => {
   if (!value || value.length < 10) return null;
   const parsed = parse(value, "dd/MM/yyyy", new Date());
   return isValid(parsed) ? parsed : null;
-};
-  return digits
-    .replace(/^(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d)/, "$1-$2");
 };
 
 import {
