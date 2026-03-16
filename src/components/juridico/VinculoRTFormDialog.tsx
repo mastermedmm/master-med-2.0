@@ -236,6 +236,11 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
       return;
     }
 
+    if (!tenant?.id) {
+      toast.error("Tenant não identificado. Faça login novamente.");
+      return;
+    }
+
     saveMutation.mutate(form);
   };
 
