@@ -48,7 +48,7 @@ const emptyForm = {
 
 export default function JuridicoEmpresas() {
   useDocumentTitle("Empresas - Jurídico");
-  const { tenantId } = useTenant();
+  const { canCreate, canUpdate, canDelete } = usePermissions();
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const queryClient = useQueryClient();
 
