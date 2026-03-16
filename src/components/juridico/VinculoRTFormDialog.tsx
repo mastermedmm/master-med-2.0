@@ -254,8 +254,14 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Profissional *</Label>
-              <Select value={form.juridico_profissional_id} onValueChange={(v) => setForm({ ...form, juridico_profissional_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <Select
+                value={form.juridico_profissional_id}
+                onValueChange={(v) => setForm({ ...form, juridico_profissional_id: v })}
+                disabled={!hasProfissionais}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={hasProfissionais ? "Selecione..." : "Nenhum profissional cadastrado"} />
+                </SelectTrigger>
                 <SelectContent>
                   {profissionais.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
@@ -267,8 +273,14 @@ export function VinculoRTFormDialog({ open, onOpenChange, vinculo, profissionais
             </div>
             <div className="space-y-2">
               <Label>Empresa *</Label>
-              <Select value={form.juridico_empresa_id} onValueChange={(v) => setForm({ ...form, juridico_empresa_id: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <Select
+                value={form.juridico_empresa_id}
+                onValueChange={(v) => setForm({ ...form, juridico_empresa_id: v })}
+                disabled={!hasEmpresas}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={hasEmpresas ? "Selecione..." : "Nenhuma empresa cadastrada"} />
+                </SelectTrigger>
                 <SelectContent>
                   {empresas.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
