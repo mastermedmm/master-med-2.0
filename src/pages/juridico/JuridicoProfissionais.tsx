@@ -55,7 +55,7 @@ const emptyForm = {
 export default function JuridicoProfissionais() {
   useDocumentTitle("Profissionais - Jurídico");
   const { canCreate, canUpdate, canDelete } = usePermissions();
-  const { canCreate, canUpdate, canDelete } = usePermissions();
+  const queryClient = useQueryClient();
   const queryClient = useQueryClient();
 
   const [dialogOpen, setDialogOpen] = useState(false);
