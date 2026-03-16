@@ -54,7 +54,7 @@ const emptyForm = {
 
 export default function JuridicoProfissionais() {
   useDocumentTitle("Profissionais - Jurídico");
-  const { tenantId } = useTenant();
+  const { canCreate, canUpdate, canDelete } = usePermissions();
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const queryClient = useQueryClient();
 
