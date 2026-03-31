@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
-import { Loader2, Save, Link, Settings as SettingsIcon, Upload, Trash2, ImageIcon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Save, Link, Settings as SettingsIcon, Upload, Trash2, ImageIcon, MessageSquare } from 'lucide-react';
 interface SystemSetting {
   id: string;
   key: string;
@@ -24,6 +25,8 @@ export default function Settings() {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [removingBanner, setRemovingBanner] = useState(false);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,15 +43,17 @@ export default function Settings() {
         .from('system_settings')
         .select('*')
         .eq('tenant_id', tenantId)
-        .in('key', ['doctor_portal_link', 'doctor_portal_banner']);
+        .in('key', ['doctor_portal_link', 'doctor_portal_banner', 'whatsapp_notifications_enabled']);
 
       if (error) throw error;
       
       if (data) {
         const linkSetting = data.find(s => s.key === 'doctor_portal_link');
         const bannerSetting = data.find(s => s.key === 'doctor_portal_banner');
+        const whatsappSetting = data.find(s => s.key === 'whatsapp_notifications_enabled');
         setDoctorPortalLink(linkSetting?.value || '');
         setBannerUrl(bannerSetting?.value || null);
+        setWhatsappEnabled(whatsappSetting?.value === 'true');
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -382,6 +387,63 @@ export default function Settings() {
                   </ul>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Notificações WhatsApp
+            </CardTitle>
+            <CardDescription>
+              Quando ativado, ao salvar o rateio de uma nota fiscal, cada médico vinculado receberá 
+              automaticamente uma notificação via WhatsApp com os dados da nota e o valor a receber.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="whatsapp-toggle">Enviar notificações automáticas</Label>
+                <p className="text-xs text-muted-foreground">
+                  Os médicos precisam ter o campo telefone preenchido com DDD
+                </p>
+              </div>
+              <Switch
+                id="whatsapp-toggle"
+                checked={whatsappEnabled}
+                disabled={savingWhatsapp}
+                onCheckedChange={async (checked) => {
+                  setSavingWhatsapp(true);
+                  try {
+                    const { error } = await supabase
+                      .from('system_settings')
+                      .upsert({
+                        key: 'whatsapp_notifications_enabled',
+                        value: checked ? 'true' : 'false',
+                        tenant_id: tenantId,
+                        description: 'Ativar/desativar notificações WhatsApp ao salvar rateio'
+                      }, { onConflict: 'tenant_id,key' });
+                    if (error) throw error;
+                    setWhatsappEnabled(checked);
+                    toast({
+                      title: checked ? 'Notificações ativadas' : 'Notificações desativadas',
+                      description: checked
+                        ? 'Os médicos receberão WhatsApp ao salvar o rateio.'
+                        : 'Notificações WhatsApp desativadas.',
+                    });
+                  } catch (error) {
+                    console.error('Error toggling WhatsApp:', error);
+                    toast({
+                      title: 'Erro ao salvar',
+                      description: 'Não foi possível alterar a configuração.',
+                      variant: 'destructive',
+                    });
+                  } finally {
+                    setSavingWhatsapp(false);
+                  }
+                }}
+              />
             </div>
           </CardContent>
         </Card>

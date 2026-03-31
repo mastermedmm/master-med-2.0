@@ -277,6 +277,30 @@ export default function Allocation() {
         newData: { invoice_id: invoice.id, allocations: allocationData },
       });
 
+      // Fire-and-forget WhatsApp notifications
+      supabase.functions.invoke('whatsapp-notify', {
+        body: {
+          invoice_id: invoice.id,
+          tenant_id: tenantId,
+          allocations: allocationData.map(a => ({
+            doctor_id: a.doctor_id,
+            amount_to_pay: a.amount_to_pay,
+          })),
+        },
+      }).then(({ data }) => {
+        if (data?.results) {
+          const sent = data.results.filter((r: any) => r.status === 'sent').length;
+          if (sent > 0) {
+            toast({
+              title: 'WhatsApp enviado',
+              description: `${sent} notificação(ões) enviada(s) com sucesso.`,
+            });
+          }
+        }
+      }).catch((err) => {
+        console.error('WhatsApp notify error:', err);
+      });
+
       toast({
         title: 'Rateio salvo!',
         description: 'O rateio foi salvo e os lançamentos foram gerados',

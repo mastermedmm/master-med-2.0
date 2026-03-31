@@ -2833,6 +2833,64 @@ export type Database = {
           },
         ]
       }
+      whatsapp_notifications_log: {
+        Row: {
+          created_at: string
+          doctor_id: string | null
+          error_message: string | null
+          id: string
+          invoice_id: string | null
+          meta_message_id: string | null
+          phone_number: string
+          status: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          doctor_id?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          meta_message_id?: string | null
+          phone_number: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string | null
+          error_message?: string | null
+          id?: string
+          invoice_id?: string | null
+          meta_message_id?: string | null
+          phone_number?: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notifications_log_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
