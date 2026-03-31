@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get hospital CNPJ
+    // Get hospital CNPJ - try by hospital_id first, fallback to hospital_name
     let hospitalCnpj = "N/A";
     if (invoice.hospital_id) {
       const { data: hospital } = await adminClient
@@ -114,6 +114,15 @@ Deno.serve(async (req) => {
         .eq("id", invoice.hospital_id)
         .single();
       if (hospital?.document) hospitalCnpj = hospital.document;
+    }
+    if (hospitalCnpj === "N/A" && invoice.hospital_name) {
+      const { data: hospitalByName } = await adminClient
+        .from("hospitals")
+        .select("document")
+        .eq("name", invoice.hospital_name)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      if (hospitalByName?.document) hospitalCnpj = hospitalByName.document;
     }
 
     // Get all doctor IDs
