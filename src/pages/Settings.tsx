@@ -50,8 +50,10 @@ export default function Settings() {
       if (data) {
         const linkSetting = data.find(s => s.key === 'doctor_portal_link');
         const bannerSetting = data.find(s => s.key === 'doctor_portal_banner');
+        const whatsappSetting = data.find(s => s.key === 'whatsapp_notifications_enabled');
         setDoctorPortalLink(linkSetting?.value || '');
         setBannerUrl(bannerSetting?.value || null);
+        setWhatsappEnabled(whatsappSetting?.value === 'true');
       }
     } catch (error) {
       console.error('Error loading settings:', error);
