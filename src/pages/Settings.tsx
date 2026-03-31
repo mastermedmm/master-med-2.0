@@ -25,6 +25,8 @@ export default function Settings() {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [removingBanner, setRemovingBanner] = useState(false);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
