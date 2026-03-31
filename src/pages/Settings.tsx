@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
-import { Loader2, Save, Link, Settings as SettingsIcon, Upload, Trash2, ImageIcon } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Save, Link, Settings as SettingsIcon, Upload, Trash2, ImageIcon, MessageSquare } from 'lucide-react';
 interface SystemSetting {
   id: string;
   key: string;
