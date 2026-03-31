@@ -390,6 +390,63 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Notificações WhatsApp
+            </CardTitle>
+            <CardDescription>
+              Quando ativado, ao salvar o rateio de uma nota fiscal, cada médico vinculado receberá 
+              automaticamente uma notificação via WhatsApp com os dados da nota e o valor a receber.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="whatsapp-toggle">Enviar notificações automáticas</Label>
+                <p className="text-xs text-muted-foreground">
+                  Os médicos precisam ter o campo telefone preenchido com DDD
+                </p>
+              </div>
+              <Switch
+                id="whatsapp-toggle"
+                checked={whatsappEnabled}
+                disabled={savingWhatsapp}
+                onCheckedChange={async (checked) => {
+                  setSavingWhatsapp(true);
+                  try {
+                    const { error } = await supabase
+                      .from('system_settings')
+                      .upsert({
+                        key: 'whatsapp_notifications_enabled',
+                        value: checked ? 'true' : 'false',
+                        tenant_id: tenantId,
+                        description: 'Ativar/desativar notificações WhatsApp ao salvar rateio'
+                      }, { onConflict: 'tenant_id,key' });
+                    if (error) throw error;
+                    setWhatsappEnabled(checked);
+                    toast({
+                      title: checked ? 'Notificações ativadas' : 'Notificações desativadas',
+                      description: checked
+                        ? 'Os médicos receberão WhatsApp ao salvar o rateio.'
+                        : 'Notificações WhatsApp desativadas.',
+                    });
+                  } catch (error) {
+                    console.error('Error toggling WhatsApp:', error);
+                    toast({
+                      title: 'Erro ao salvar',
+                      description: 'Não foi possível alterar a configuração.',
+                      variant: 'destructive',
+                    });
+                  } finally {
+                    setSavingWhatsapp(false);
+                  }
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );
