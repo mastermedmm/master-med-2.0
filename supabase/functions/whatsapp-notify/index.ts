@@ -1,5 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2/cors";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
 
 const WHATSAPP_API_URL = "https://graph.facebook.com/v21.0";
 
@@ -52,10 +56,8 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(
-      authHeader.replace("Bearer ", "")
-    );
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -103,7 +105,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get hospital CNPJ
+    // Get hospital CNPJ - try by hospital_id first, fallback to hospital_name
     let hospitalCnpj = "N/A";
     if (invoice.hospital_id) {
       const { data: hospital } = await adminClient
@@ -112,6 +114,15 @@ Deno.serve(async (req) => {
         .eq("id", invoice.hospital_id)
         .single();
       if (hospital?.document) hospitalCnpj = hospital.document;
+    }
+    if (hospitalCnpj === "N/A" && invoice.hospital_name) {
+      const { data: hospitalByName } = await adminClient
+        .from("hospitals")
+        .select("document")
+        .eq("name", invoice.hospital_name)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      if (hospitalByName?.document) hospitalCnpj = hospitalByName.document;
     }
 
     // Get all doctor IDs
