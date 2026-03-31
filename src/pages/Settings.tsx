@@ -43,7 +43,7 @@ export default function Settings() {
         .from('system_settings')
         .select('*')
         .eq('tenant_id', tenantId)
-        .in('key', ['doctor_portal_link', 'doctor_portal_banner']);
+        .in('key', ['doctor_portal_link', 'doctor_portal_banner', 'whatsapp_notifications_enabled']);
 
       if (error) throw error;
       
