@@ -213,6 +213,7 @@ Deno.serve(async (req) => {
         );
 
         const data = await response.json();
+        console.log("[whatsapp-notify] Response:", response.status, JSON.stringify(data));
 
         if (response.ok) {
           const metaMessageId = data?.messages?.[0]?.id || null;
