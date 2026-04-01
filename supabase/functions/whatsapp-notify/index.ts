@@ -64,7 +64,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { invoice_id, allocations, tenant_id } = await req.json();
+    const body = await req.json();
+    const { action, invoice_id, allocations, tenant_id } = body;
+
+    // Diagnostic mode: validate WhatsApp credentials
+    if (action === "test_connection") {
+      console.log("[whatsapp-notify] test_connection — phoneNumberId:", phoneNumberId);
+      console.log("[whatsapp-notify] test_connection — token length:", whatsappToken?.length);
+      const testRes = await fetch(
+        `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating`,
+        { headers: { Authorization: `Bearer ${whatsappToken}` } }
+      );
+      const testData = await testRes.json();
+      console.log("[whatsapp-notify] test_connection response:", JSON.stringify(testData));
+      return new Response(
+        JSON.stringify({ phoneNumberId, tokenLength: whatsappToken?.length, meta_response: testData }),
+        { status: testRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!invoice_id || !allocations?.length || !tenant_id) {
       return new Response(
