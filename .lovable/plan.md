@@ -1,36 +1,58 @@
 
 
-# Corrigir FK que impede exclusão de notas fiscais
+# Diagnóstico WhatsApp: Validar credenciais como o Disparo Pro faz
 
-## Problema
+## Descobertas no Disparo Pro
 
-A tabela `whatsapp_notifications_log` tem uma foreign key `invoice_id` referenciando `invoices(id)` sem `ON DELETE CASCADE`. Ao tentar excluir uma invoice que já teve notificação WhatsApp enviada, o banco rejeita a operação.
+O Disparo Pro valida a conexão chamando `GET https://graph.facebook.com/v21.0/{phone_number_id}?fields=verified_name,display_phone_number` antes de enviar mensagens. Se o token não tiver permissão para aquele Phone Number ID, a Meta retorna erro — mas no envio de mensagens pode retornar `200 OK` mesmo assim (aceita a requisição mas não entrega).
 
-Erro: `update or delete on table "invoices" violates foreign key constraint "whatsapp_notifications_log_invoice_id_fkey"`
+## Plano
 
-## Solução
+### 1. Adicionar modo diagnóstico na Edge Function `whatsapp-notify`
 
-Uma migration que altera a FK para `ON DELETE CASCADE`, permitindo que os logs de notificação sejam automaticamente removidos quando a invoice é excluída.
+Aceitar um parâmetro `action: "test_connection"` que faz exatamente o que o Disparo Pro faz: chama `GET /{phone_number_id}?fields=verified_name,display_phone_number` e retorna o resultado. Isso vai revelar:
+- Se o token tem acesso ao Phone Number ID `1019527884576976`
+- Qual o número real associado ao token
+- O nome verificado da conta
+
+### 2. Adicionar `console.log` de diagnóstico no envio
+
+Logar `phoneNumberId`, a URL completa e o response body para confirmar os valores no runtime.
+
+### 3. Chamar a Edge Function em modo teste
+
+Usar `curl_edge_functions` com `action: "test_connection"` para ver a resposta em tempo real.
 
 ## Alterações
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/migrations/xxx_fix_whatsapp_log_fk_cascade.sql` | Criar — drop e recriar FK com ON DELETE CASCADE |
+| `supabase/functions/whatsapp-notify/index.ts` | Editar — adicionar action `test_connection` e `console.log` de diagnóstico |
 
-### SQL da Migration
+## Detalhes técnicos
 
-```sql
-ALTER TABLE public.whatsapp_notifications_log
-  DROP CONSTRAINT whatsapp_notifications_log_invoice_id_fkey,
-  ADD CONSTRAINT whatsapp_notifications_log_invoice_id_fkey
-    FOREIGN KEY (invoice_id) REFERENCES public.invoices(id) ON DELETE CASCADE;
+Na edge function, antes do fluxo de envio normal, verificar se `action === "test_connection"`:
 
-ALTER TABLE public.whatsapp_notifications_log
-  DROP CONSTRAINT whatsapp_notifications_log_doctor_id_fkey,
-  ADD CONSTRAINT whatsapp_notifications_log_doctor_id_fkey
-    FOREIGN KEY (doctor_id) REFERENCES public.doctors(id) ON DELETE CASCADE;
+```typescript
+// Se action = test_connection, apenas validar credenciais
+if (action === "test_connection") {
+  const testRes = await fetch(
+    `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating`,
+    { headers: { Authorization: `Bearer ${whatsappToken}` } }
+  );
+  const testData = await testRes.json();
+  console.log("[whatsapp-notify] test_connection response:", JSON.stringify(testData));
+  return Response with testData;
+}
 ```
 
-Também ajusto a FK de `doctor_id` para CASCADE, evitando o mesmo problema ao excluir médicos.
+No fluxo de envio, adicionar logs:
+```typescript
+console.log("[whatsapp-notify] phoneNumberId:", phoneNumberId);
+console.log("[whatsapp-notify] token length:", whatsappToken?.length);
+console.log("[whatsapp-notify] POST URL:", url);
+console.log("[whatsapp-notify] Response:", response.status, JSON.stringify(data));
+```
+
+Depois do deploy, chamarei `test_connection` para revelar a causa raiz.
 
