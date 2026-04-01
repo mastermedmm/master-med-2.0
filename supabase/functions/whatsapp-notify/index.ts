@@ -81,9 +81,13 @@ Deno.serve(async (req) => {
     }
     // --- test_send: envia template de teste para número informado ---
     if (action === "test_send") {
+      // Accept apikey header OR valid Bearer token
       const requestApiKey = req.headers.get("apikey");
+      const authHeaderTest = req.headers.get("Authorization");
       const validApiKeys = [supabaseAnonKey, supabasePublishableKey].filter(Boolean);
-      if (!requestApiKey || !validApiKeys.includes(requestApiKey)) {
+      const hasValidApiKey = requestApiKey && validApiKeys.includes(requestApiKey);
+      const hasValidBearer = authHeaderTest?.startsWith("Bearer ");
+      if (!hasValidApiKey && !hasValidBearer) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
