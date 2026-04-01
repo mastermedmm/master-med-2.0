@@ -198,8 +198,10 @@ Deno.serve(async (req) => {
       };
 
       try {
+        const postUrl = `${WHATSAPP_API_URL}/${phoneNumberId}/messages`;
+        console.log("[whatsapp-notify] POST URL:", postUrl, "| to:", phone);
         const response = await fetch(
-          `${WHATSAPP_API_URL}/${phoneNumberId}/messages`,
+          postUrl,
           {
             method: "POST",
             headers: {
