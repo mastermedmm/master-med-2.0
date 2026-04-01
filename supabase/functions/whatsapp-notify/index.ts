@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       console.log("[whatsapp-notify] test_connection — phoneNumberId:", phoneNumberId);
       console.log("[whatsapp-notify] test_connection — token length:", whatsappToken?.length);
       const testRes = await fetch(
-        `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating,name_status,application`,
+        `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating,name_status`,
         { headers: { Authorization: `Bearer ${whatsappToken}` } }
       );
       const testData = await testRes.json();
