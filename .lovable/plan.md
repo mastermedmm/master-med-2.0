@@ -1,42 +1,36 @@
 
 
-# Diagnóstico e Logging Detalhado para WhatsApp
+# Corrigir FK que impede exclusão de notas fiscais
 
-## Situação Atual
+## Problema
 
-A API da Meta retornou `200 OK` com `wamid` válidos para ambos os médicos. Isso confirma que credenciais e template estão corretos. O problema está na entrega pela Meta.
+A tabela `whatsapp_notifications_log` tem uma foreign key `invoice_id` referenciando `invoices(id)` sem `ON DELETE CASCADE`. Ao tentar excluir uma invoice que já teve notificação WhatsApp enviada, o banco rejeita a operação.
 
-## Possíveis Causas (lado Meta)
+Erro: `update or delete on table "invoices" violates foreign key constraint "whatsapp_notifications_log_invoice_id_fkey"`
 
-- Template aprovado mas com variáveis em formato diferente do esperado (a mensagem chega vazia ou é bloqueada)
-- O `Phone Number ID` aponta para um número de teste, não o de produção
-- O número de telefone do WhatsApp Business não está verificado para envio em produção
-- Limite de mensagens da conta Business (tier de envio)
+## Solução
 
-## O que Vamos Fazer
-
-### 1. Adicionar logging detalhado na Edge Function
-
-Registrar na tabela `whatsapp_notifications_log` o **response body completo** da Meta (campo `meta_response`), para que possamos ver exatamente o que a Meta retornou, incluindo status de entrega.
-
-### 2. Adicionar coluna `meta_response` à tabela
-
-Nova migration para adicionar `meta_response jsonb` na tabela `whatsapp_notifications_log`.
-
-### 3. Logar o payload enviado
-
-Salvar também o payload do template enviado, para podermos comparar com o que a Meta espera.
+Uma migration que altera a FK para `ON DELETE CASCADE`, permitindo que os logs de notificação sejam automaticamente removidos quando a invoice é excluída.
 
 ## Alterações
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/migrations/xxx_add_meta_response.sql` | Criar — adicionar coluna `meta_response` e `request_payload` |
-| `supabase/functions/whatsapp-notify/index.ts` | Editar — salvar response body e request payload nos logs |
+| `supabase/migrations/xxx_fix_whatsapp_log_fk_cascade.sql` | Criar — drop e recriar FK com ON DELETE CASCADE |
 
-## Próximo Passo do Usuário
+### SQL da Migration
 
-Após deploy, fazer um novo teste de rateio e verificar os dados completos na tabela `whatsapp_notifications_log` — isso revelará se a Meta está rejeitando silenciosamente ou se há outro problema.
+```sql
+ALTER TABLE public.whatsapp_notifications_log
+  DROP CONSTRAINT whatsapp_notifications_log_invoice_id_fkey,
+  ADD CONSTRAINT whatsapp_notifications_log_invoice_id_fkey
+    FOREIGN KEY (invoice_id) REFERENCES public.invoices(id) ON DELETE CASCADE;
 
-Também recomendo verificar no **Meta Business Manager > WhatsApp Manager > Message Logs** usando os `wamid` retornados para ver o status real de entrega.
+ALTER TABLE public.whatsapp_notifications_log
+  DROP CONSTRAINT whatsapp_notifications_log_doctor_id_fkey,
+  ADD CONSTRAINT whatsapp_notifications_log_doctor_id_fkey
+    FOREIGN KEY (doctor_id) REFERENCES public.doctors(id) ON DELETE CASCADE;
+```
+
+Também ajusto a FK de `doctor_id` para CASCADE, evitando o mesmo problema ao excluir médicos.
 
