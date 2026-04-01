@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const WHATSAPP_API_URL = "https://graph.facebook.com/v21.0";
+const WHATSAPP_API_URL = "https://graph.facebook.com/v24.0";
 
 function normalizePhone(phone: string): string {
   let digits = phone.replace(/\D/g, "");
