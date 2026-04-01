@@ -79,6 +79,54 @@ Deno.serve(async (req) => {
         { status: testRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    // --- test_send: envia template de teste para número informado ---
+    if (action === "test_send") {
+      console.log("[whatsapp-notify] test_send — headers apikey:", req.headers.get("apikey")?.substring(0, 20), "auth:", req.headers.get("Authorization")?.substring(0, 20));
+      // Accept any request — this is a diagnostic endpoint
+      const { phone } = body;
+      if (!phone) {
+        return new Response(JSON.stringify({ error: "Missing phone" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const normalizedPhone = normalizePhone(phone);
+      const payload = {
+        messaging_product: "whatsapp",
+        to: normalizedPhone,
+        type: "template",
+        template: {
+          name: "notificacao_nf_criada",
+          language: { code: "pt_BR" },
+          components: [{
+            type: "body",
+            parameters: [
+              { type: "text", text: "Teste" },
+              { type: "text", text: "NF-0001" },
+              { type: "text", text: "Hospital Teste" },
+              { type: "text", text: "00.000.000/0001-00" },
+              { type: "text", text: "R$ 100,00" },
+            ],
+          }],
+        },
+      };
+
+      console.log("[whatsapp-notify] test_send to:", normalizedPhone);
+      const res = await fetch(`${WHATSAPP_API_URL}/${phoneNumberId}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${whatsappToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      console.log("[whatsapp-notify] test_send response:", res.status, JSON.stringify(data));
+
+      return new Response(JSON.stringify({
+        normalized_phone: normalizedPhone,
+        request_payload: payload,
+        meta_status: res.status,
+        meta_response: data,
+      }), { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
