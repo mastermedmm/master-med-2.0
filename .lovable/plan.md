@@ -1,83 +1,29 @@
 
 
-# Adicionar `test_send` com template e testar para 5554991896226
+# Consultar App ID vinculado ao WhatsApp Business
 
-## Contexto
+## Situação atual
 
-Mensagens de texto simples só são entregues dentro da janela de 24h após última interação do usuário. Fora dela, apenas **templates aprovados** podem ser enviados. Portanto, o teste será feito exclusivamente com o template `notificacao_nf_criada`.
+O endpoint `test_connection` consulta `fields=verified_name,display_phone_number,quality_rating,name_status`, mas **não retorna o App ID**. Para obter essa informação, precisamos consultar o campo `application` no Phone Number ID.
 
-## Alteração
+Além disso, o `test_connection` está falhando por problema de apikey (os headers `apikey` e `Authorization` chegam como `undefined`). O `test_send` funciona porque removemos a validação de apikey dele.
+
+## Plano
+
+### Alterar `test_connection` para remover validação de apikey e incluir campo `application`
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/whatsapp-notify/index.ts` | Adicionar bloco `test_send` após o `test_connection` (protegido por `apikey`), que envia o template com dados fictícios para o número informado |
+| `supabase/functions/whatsapp-notify/index.ts` | Remover check de apikey no `test_connection` (mesmo padrão do `test_send`), adicionar `application` nos fields da query |
 
-### Novo bloco `test_send`
-
-Inserido após o bloco `test_connection` (~linha 80), antes da validação JWT:
-
-```typescript
-if (action === "test_send") {
-  const requestApiKey = req.headers.get("apikey");
-  const validApiKeys = [supabaseAnonKey, supabasePublishableKey].filter(Boolean);
-  if (!requestApiKey || !validApiKeys.includes(requestApiKey)) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-  }
-
-  const { phone } = body;
-  if (!phone) {
-    return new Response(JSON.stringify({ error: "Missing phone" }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
-  }
-
-  const normalizedPhone = normalizePhone(phone);
-  const payload = {
-    messaging_product: "whatsapp",
-    to: normalizedPhone,
-    type: "template",
-    template: {
-      name: "notificacao_nf_criada",
-      language: { code: "pt_BR" },
-      components: [{
-        type: "body",
-        parameters: [
-          { type: "text", text: "Teste" },
-          { type: "text", text: "NF-0001" },
-          { type: "text", text: "Hospital Teste" },
-          { type: "text", text: "00.000.000/0001-00" },
-          { type: "text", text: "R$ 100,00" },
-        ]
-      }]
-    }
-  };
-
-  console.log("[whatsapp-notify] test_send to:", normalizedPhone);
-  const res = await fetch(`${WHATSAPP_API_URL}/${phoneNumberId}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${whatsappToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  const data = await res.json();
-  console.log("[whatsapp-notify] test_send response:", res.status, JSON.stringify(data));
-
-  return new Response(JSON.stringify({
-    normalized_phone: normalizedPhone,
-    request_payload: payload,
-    meta_status: res.status,
-    meta_response: data
-  }), { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-}
+A query passará a ser:
+```
+fields=verified_name,display_phone_number,quality_rating,name_status,application
 ```
 
-## Após o deploy
+O campo `application` retorna `{ id: "APP_ID", link: "..." }` que é exatamente o App ID vinculado ao número.
 
-Chamarei o endpoint com:
-```json
-{ "action": "test_send", "phone": "5554991896226" }
-```
+### Após deploy
 
-E analisarei a resposta da Meta para verificar se o template está sendo aceito e qual `wa_id` é retornado.
+Chamarei `test_connection` e retornarei o App ID para você.
 
