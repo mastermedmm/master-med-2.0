@@ -57,19 +57,10 @@ Deno.serve(async (req) => {
 
     // Diagnostic mode: validate WhatsApp credentials
     if (action === "test_connection") {
-      const requestApiKey = req.headers.get("apikey");
-      const validApiKeys = [supabaseAnonKey, supabasePublishableKey].filter(Boolean);
-      if (!requestApiKey || !validApiKeys.includes(requestApiKey)) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       console.log("[whatsapp-notify] test_connection — phoneNumberId:", phoneNumberId);
       console.log("[whatsapp-notify] test_connection — token length:", whatsappToken?.length);
       const testRes = await fetch(
-        `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating,name_status`,
+        `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating,name_status,application`,
         { headers: { Authorization: `Bearer ${whatsappToken}` } }
       );
       const testData = await testRes.json();
