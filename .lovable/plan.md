@@ -1,65 +1,42 @@
 
 
-# Correções na Edge Function `whatsapp-notify`
+# Diagnóstico e Logging Detalhado para WhatsApp
 
-A implementação atual tem o mapeamento correto das 5 variáveis do template, mas contém **3 bugs** que impedirão o funcionamento em produção.
+## Situação Atual
 
-## Variáveis do Template — Mapeamento (correto)
+A API da Meta retornou `200 OK` com `wamid` válidos para ambos os médicos. Isso confirma que credenciais e template estão corretos. O problema está na entrega pela Meta.
 
-| Variável | Valor enviado | Origem |
-|----------|--------------|--------|
-| `{{1}}` | `firstName` | Primeiro nome do médico (`doctors.name`, split por espaço) |
-| `{{2}}` | `invoice.invoice_number` | Número da nota fiscal |
-| `{{3}}` | `invoice.hospital_name` | Nome do hospital |
-| `{{4}}` | `hospitalCnpj` | CNPJ do hospital (`hospitals.document` via `hospital_id`) |
-| `{{5}}` | `amountFormatted` | Valor formatado em R$ (`formatBRL(amount_to_pay)`) |
+## Possíveis Causas (lado Meta)
 
-O mapeamento está correto e alinhado com o template aprovado na Meta.
+- Template aprovado mas com variáveis em formato diferente do esperado (a mensagem chega vazia ou é bloqueada)
+- O `Phone Number ID` aponta para um número de teste, não o de produção
+- O número de telefone do WhatsApp Business não está verificado para envio em produção
+- Limite de mensagens da conta Business (tier de envio)
 
-## Bugs a Corrigir
+## O que Vamos Fazer
 
-### 1. Import de CORS inválido
-A linha `import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2/cors"` não existe nesse path do esm.sh. Precisa definir `corsHeaders` manualmente.
+### 1. Adicionar logging detalhado na Edge Function
 
-### 2. `auth.getClaims()` não existe
-O método `getClaims` não faz parte do supabase-js client. A validação de JWT deve usar `auth.getUser()` que valida o token automaticamente.
+Registrar na tabela `whatsapp_notifications_log` o **response body completo** da Meta (campo `meta_response`), para que possamos ver exatamente o que a Meta retornou, incluindo status de entrega.
 
-### 3. Possível `hospital_id` nulo
-Se a invoice não tiver `hospital_id` preenchido, o CNPJ ficará "N/A". Isso já é tratado, mas precisamos garantir que funcione buscando pelo nome do hospital como fallback.
+### 2. Adicionar coluna `meta_response` à tabela
+
+Nova migration para adicionar `meta_response jsonb` na tabela `whatsapp_notifications_log`.
+
+### 3. Logar o payload enviado
+
+Salvar também o payload do template enviado, para podermos comparar com o que a Meta espera.
 
 ## Alterações
 
-### Arquivo: `supabase/functions/whatsapp-notify/index.ts`
+| Arquivo | Ação |
+|---------|------|
+| `supabase/migrations/xxx_add_meta_response.sql` | Criar — adicionar coluna `meta_response` e `request_payload` |
+| `supabase/functions/whatsapp-notify/index.ts` | Editar — salvar response body e request payload nos logs |
 
-1. Remover import de corsHeaders e definir manualmente
-2. Substituir `auth.getClaims()` por `auth.getUser()` para validação JWT
-3. Adicionar fallback: se `hospital_id` não existir, buscar hospital pelo `hospital_name` para pegar o CNPJ
+## Próximo Passo do Usuário
 
-## Detalhes Técnicos
+Após deploy, fazer um novo teste de rateio e verificar os dados completos na tabela `whatsapp_notifications_log` — isso revelará se a Meta está rejeitando silenciosamente ou se há outro problema.
 
-```text
-ANTES (CORS):
-  import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2/cors";
-
-DEPOIS:
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, ...',
-  };
-
-ANTES (Auth):
-  const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(...)
-
-DEPOIS:
-  const { data: { user }, error: userError } = await userClient.auth.getUser();
-  if (userError || !user) { return 401 }
-
-ANTES (Hospital CNPJ):
-  Só busca por hospital_id
-
-DEPOIS:
-  Se hospital_id não existir, busca hospital por nome (hospital_name) como fallback
-```
-
-Nenhuma mudança no frontend — apenas correções na edge function.
+Também recomendo verificar no **Meta Business Manager > WhatsApp Manager > Message Logs** usando os `wamid` retornados para ver o status real de entrega.
 
