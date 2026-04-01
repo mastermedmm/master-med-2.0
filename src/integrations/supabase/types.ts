@@ -2841,7 +2841,9 @@ export type Database = {
           id: string
           invoice_id: string | null
           meta_message_id: string | null
+          meta_response: Json | null
           phone_number: string
+          request_payload: Json | null
           status: string
           tenant_id: string | null
         }
@@ -2852,7 +2854,9 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           meta_message_id?: string | null
+          meta_response?: Json | null
           phone_number: string
+          request_payload?: Json | null
           status?: string
           tenant_id?: string | null
         }
@@ -2863,7 +2867,9 @@ export type Database = {
           id?: string
           invoice_id?: string | null
           meta_message_id?: string | null
+          meta_response?: Json | null
           phone_number?: string
+          request_payload?: Json | null
           status?: string
           tenant_id?: string | null
         }
