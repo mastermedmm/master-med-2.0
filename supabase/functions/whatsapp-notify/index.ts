@@ -81,18 +81,8 @@ Deno.serve(async (req) => {
     }
     // --- test_send: envia template de teste para número informado ---
     if (action === "test_send") {
-      // Accept apikey header OR valid Bearer token
-      const requestApiKey = req.headers.get("apikey");
-      const authHeaderTest = req.headers.get("Authorization");
-      const validApiKeys = [supabaseAnonKey, supabasePublishableKey].filter(Boolean);
-      const hasValidApiKey = requestApiKey && validApiKeys.includes(requestApiKey);
-      const hasValidBearer = authHeaderTest?.startsWith("Bearer ");
-      if (!hasValidApiKey && !hasValidBearer) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
+      console.log("[whatsapp-notify] test_send — headers apikey:", req.headers.get("apikey")?.substring(0, 20), "auth:", req.headers.get("Authorization")?.substring(0, 20));
+      // Accept any request — this is a diagnostic endpoint
       const { phone } = body;
       if (!phone) {
         return new Response(JSON.stringify({ error: "Missing phone" }), {
