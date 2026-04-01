@@ -204,6 +204,8 @@ Deno.serve(async (req) => {
             phone_number: phone,
             status: "sent",
             meta_message_id: metaMessageId,
+            meta_response: data,
+            request_payload: payload,
           });
           results.push({ doctor_id: alloc.doctor_id, status: "sent", meta_message_id: metaMessageId });
         } else {
@@ -215,6 +217,8 @@ Deno.serve(async (req) => {
             phone_number: phone,
             status: "failed",
             error_message: errorMsg,
+            meta_response: data,
+            request_payload: payload,
           });
           results.push({ doctor_id: alloc.doctor_id, status: "failed", error: errorMsg });
         }
