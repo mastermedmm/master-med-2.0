@@ -31,17 +31,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabasePublishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
     const whatsappToken = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const phoneNumberId = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -50,6 +43,49 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "WhatsApp credentials not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    let body: any = {};
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      try {
+        body = await req.json();
+      } catch {
+        body = {};
+      }
+    }
+    const { action, invoice_id, allocations, tenant_id } = body;
+
+    // Diagnostic mode: validate WhatsApp credentials
+    if (action === "test_connection") {
+      const requestApiKey = req.headers.get("apikey");
+      const validApiKeys = [supabaseAnonKey, supabasePublishableKey].filter(Boolean);
+      if (!requestApiKey || !validApiKeys.includes(requestApiKey)) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("[whatsapp-notify] test_connection — phoneNumberId:", phoneNumberId);
+      console.log("[whatsapp-notify] test_connection — token length:", whatsappToken?.length);
+      const testRes = await fetch(
+        `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating,name_status`,
+        { headers: { Authorization: `Bearer ${whatsappToken}` } }
+      );
+      const testData = await testRes.json();
+      console.log("[whatsapp-notify] test_connection response:", JSON.stringify(testData));
+      return new Response(
+        JSON.stringify({ phoneNumberId, tokenLength: whatsappToken?.length, meta_response: testData }),
+        { status: testRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Validate user JWT
@@ -62,25 +98,6 @@ Deno.serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    const body = await req.json();
-    const { action, invoice_id, allocations, tenant_id } = body;
-
-    // Diagnostic mode: validate WhatsApp credentials
-    if (action === "test_connection") {
-      console.log("[whatsapp-notify] test_connection — phoneNumberId:", phoneNumberId);
-      console.log("[whatsapp-notify] test_connection — token length:", whatsappToken?.length);
-      const testRes = await fetch(
-        `${WHATSAPP_API_URL}/${phoneNumberId}?fields=verified_name,display_phone_number,quality_rating`,
-        { headers: { Authorization: `Bearer ${whatsappToken}` } }
-      );
-      const testData = await testRes.json();
-      console.log("[whatsapp-notify] test_connection response:", JSON.stringify(testData));
-      return new Response(
-        JSON.stringify({ phoneNumberId, tokenLength: whatsappToken?.length, meta_response: testData }),
-        { status: testRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     if (!invoice_id || !allocations?.length || !tenant_id) {
