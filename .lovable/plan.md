@@ -1,37 +1,83 @@
 
 
-# Verificar App vinculado ao número WhatsApp
+# Adicionar `test_send` com template e testar para 5554991896226
 
-## Situação
+## Contexto
 
-A Edge Function exige JWT para qualquer chamada, então não consigo executar `test_connection` para consultar os dados do Phone Number ID na Meta. Preciso de uma forma de validar as credenciais.
+Mensagens de texto simples só são entregues dentro da janela de 24h após última interação do usuário. Fora dela, apenas **templates aprovados** podem ser enviados. Portanto, o teste será feito exclusivamente com o template `notificacao_nf_criada`.
 
-## O que os logs mostram
-
-- A Meta retorna `200 OK` com `message_status: accepted` para todos os envios
-- A Meta está normalizando os números (removendo o 9º dígito): `5554991896226` → `555491896226`
-- Template `notificacao_nf_criada` com 5 parâmetros está sendo aceito
-
-## Plano
-
-### Alterar a Edge Function para permitir `test_connection` com validação simplificada
-
-Mover o bloco `test_connection` para **antes** da validação de JWT, protegendo-o apenas com o `apikey` header (que já é enviado automaticamente pelo Supabase). Isso me permitirá chamar o endpoint de diagnóstico diretamente e verificar:
-
-- `display_phone_number` — qual número está vinculado ao token
-- `verified_name` — nome da empresa/app verificado
-- `quality_rating` — qualidade da conta
-- `name_status` — se o nome foi aprovado
-
-Assim sabemos se o token pertence ao app correto e se o número é de produção.
-
-### Alteração
+## Alteração
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/whatsapp-notify/index.ts` | Mover `test_connection` para antes do check de JWT, adicionar campo `name_status` na query |
+| `supabase/functions/whatsapp-notify/index.ts` | Adicionar bloco `test_send` após o `test_connection` (protegido por `apikey`), que envia o template com dados fictícios para o número informado |
 
-### Após o deploy
+### Novo bloco `test_send`
 
-Chamarei o endpoint `test_connection` usando `curl_edge_functions` e analisarei a resposta da Meta para confirmar se o app e o número estão corretamente configurados.
+Inserido após o bloco `test_connection` (~linha 80), antes da validação JWT:
+
+```typescript
+if (action === "test_send") {
+  const requestApiKey = req.headers.get("apikey");
+  const validApiKeys = [supabaseAnonKey, supabasePublishableKey].filter(Boolean);
+  if (!requestApiKey || !validApiKeys.includes(requestApiKey)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const { phone } = body;
+  if (!phone) {
+    return new Response(JSON.stringify({ error: "Missing phone" }), {
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
+  const normalizedPhone = normalizePhone(phone);
+  const payload = {
+    messaging_product: "whatsapp",
+    to: normalizedPhone,
+    type: "template",
+    template: {
+      name: "notificacao_nf_criada",
+      language: { code: "pt_BR" },
+      components: [{
+        type: "body",
+        parameters: [
+          { type: "text", text: "Teste" },
+          { type: "text", text: "NF-0001" },
+          { type: "text", text: "Hospital Teste" },
+          { type: "text", text: "00.000.000/0001-00" },
+          { type: "text", text: "R$ 100,00" },
+        ]
+      }]
+    }
+  };
+
+  console.log("[whatsapp-notify] test_send to:", normalizedPhone);
+  const res = await fetch(`${WHATSAPP_API_URL}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${whatsappToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  console.log("[whatsapp-notify] test_send response:", res.status, JSON.stringify(data));
+
+  return new Response(JSON.stringify({
+    normalized_phone: normalizedPhone,
+    request_payload: payload,
+    meta_status: res.status,
+    meta_response: data
+  }), { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+```
+
+## Após o deploy
+
+Chamarei o endpoint com:
+```json
+{ "action": "test_send", "phone": "5554991896226" }
+```
+
+E analisarei a resposta da Meta para verificar se o template está sendo aceito e qual `wa_id` é retornado.
 
